@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriMIDI</title>
+    <!-- Suppress favicon request to prevent 404 error -->
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amarante&family=Manufacturing+Consent&family=Passero+One&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block;
+            z-index: 1;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 40px 40px 40px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .overlay .preset-section {
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            pointer-events: auto;
+            transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease;
+            overflow: hidden;
+        }
+        .overlay .preset-section.hidden {
+            opacity: 0;
+            max-height: 0;
+            margin: 0;
+            padding: 0;
+            pointer-events: none;
+        }
+        .overlay .preset-section #keyboard-visual-icon,
+        .overlay .preset-section #settings-icon,
+        .overlay .preset-section #camera-icon,
+        .overlay .preset-section #tutorial-icon {
+            margin-left: 16px;
+        }
+        .overlay .preset-section label {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+        .overlay h1 {
+            margin: 0;
+            font-family: "Amarante", serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 56px;
+            color: #ffffff;
+            letter-spacing: 2px;
+            cursor: pointer;
+            line-height: 1.2;
+            transition: opacity 0.2s ease;
+            user-select: none;
+            pointer-events: auto;
+        }
+        .overlay h1:hover {
+            opacity: 0.8;
+        }
+        .overlay .subtitle {
+            margin: 12px 0 0 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 400;
+            cursor: default;
+            letter-spacing: 0.5px;
+            text-transform: none;
+            line-height: 1.8;
+            text-align: center;
+            max-width: 600px;
+            transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease;
+            overflow: hidden;
+            pointer-events: auto;
+        }
+        .overlay .subtitle.hidden {
+            opacity: 0;
+            max-height: 0;
+            margin: 0;
+            padding: 0;
+        }
+        .overlay .subtitle .coffee-line {
+            margin-top: 16px;
+            font-style: italic;
+            display: block;
+        }
+        .overlay .subtitle a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.2s ease;
+            font-weight: 400;
+        }
+        .overlay .subtitle a:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+        #preset-select {
+            padding: 8px 12px;
+            padding-right: 36px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
+            min-width: 160px;
+            height: 36px;
+        }
+        #preset-select:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        #preset-select:focus {
+            outline: none;
+            border-color: #1a5a3a;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        #preset-select option {
+            background: rgba(40, 40, 55, 0.98);
+            color: #fff;
+            padding: 8px 12px;
+        }
+        #settings-icon {
+            cursor: pointer;
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 24px;
+            line-height: 1;
+        }
+        #settings-icon:hover {
+            transform: scale(1.1);
+        }
+        #keyboard-visual-icon {
+            cursor: pointer;
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 24px;
+            line-height: 1;
+        }
+        #keyboard-visual-icon:hover {
+            transform: scale(1.1);
+        }
+        #camera-icon {
+            cursor: pointer;
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 24px;
+            line-height: 1;
+        }
+        #camera-icon:hover {
+            transform: scale(1.1);
+        }
+        #tutorial-icon {
+            cursor: pointer;
+            display: inline-block;
+            transition: all 0.2s;
+            font-size: 20px;
+            line-height: 1;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #tutorial-icon:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        .tutorial-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: transparent;
+            z-index: 3000;
+            pointer-events: none;
+        }
+        .tutorial-overlay.active {
+            display: block;
+        }
+        .tutorial-highlight {
+            position: relative;
+            z-index: 3001;
+            pointer-events: auto;
+            animation: tutorialPulse 1.5s ease-in-out infinite;
+        }
+        .tutorial-highlight::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border: 2px solid rgba(26, 90, 58, 0.8);
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(26, 90, 58, 0.6), 0 0 40px rgba(26, 90, 58, 0.4);
+            pointer-events: none;
+        }
+        @keyframes tutorialPulse {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(26, 90, 58, 0.6), 0 0 40px rgba(26, 90, 58, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(26, 90, 58, 0.8), 0 0 60px rgba(26, 90, 58, 0.6);
+            }
+        }
+        .tutorial-bubble {
+            position: absolute;
+            background: rgba(8, 12, 16, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 280px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.5;
+            z-index: 3002;
+            pointer-events: auto;
+        }
+        .tutorial-bubble::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        .tutorial-bubble.arrow-top::before {
+            bottom: -8px;
+            left: 20px;
+            border-width: 8px 8px 0 8px;
+            border-color: rgba(8, 12, 16, 0.95) transparent transparent transparent;
+        }
+        .tutorial-bubble.arrow-bottom::before {
+            top: -8px;
+            left: 20px;
+            border-width: 0 8px 8px 8px;
+            border-color: transparent transparent rgba(8, 12, 16, 0.95) transparent;
+        }
+        .tutorial-bubble.arrow-left::before {
+            right: -8px;
+            top: 20px;
+            border-width: 8px 0 8px 8px;
+            border-color: transparent transparent transparent rgba(8, 12, 16, 0.95);
+        }
+        .tutorial-bubble.arrow-right::before {
+            left: -8px;
+            top: 20px;
+            border-width: 8px 8px 8px 0;
+            border-color: transparent rgba(8, 12, 16, 0.95) transparent transparent;
+        }
+        .tutorial-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .tutorial-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .tutorial-next {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: rgba(26, 90, 58, 0.2);
+            border: 1px solid rgba(26, 90, 58, 0.3);
+            border-radius: 6px;
+            color: #2a7a5a;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tutorial-next:hover {
+            background: rgba(26, 90, 58, 0.3);
+            color: #3a9a7a;
+        }
+        .tutorial-prompt-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 4000;
+            align-items: center;
+            justify-content: center;
+        }
+        .tutorial-prompt-modal.active {
+            display: flex;
+        }
+        .tutorial-prompt-panel {
+            background: rgba(8, 12, 16, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+        .tutorial-prompt-panel h3 {
+            margin: 0 0 16px 0;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.95);
+        }
+        .tutorial-prompt-panel p {
+            margin: 0 0 24px 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.5;
+        }
+        .tutorial-prompt-checkbox {
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tutorial-prompt-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #1a5a3a;
+        }
+        .tutorial-prompt-checkbox label {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+        }
+        .tutorial-prompt-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .tutorial-prompt-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tutorial-prompt-btn-primary {
+            background: rgba(26, 90, 58, 0.3);
+            border: 1px solid rgba(26, 90, 58, 0.5);
+            color: #2a7a5a;
+        }
+        .tutorial-prompt-btn-primary:hover {
+            background: rgba(26, 90, 58, 0.4);
+            color: #3a9a7a;
+        }
+        .tutorial-prompt-btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .tutorial-prompt-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.95);
+        }
+        .keyboard-visual-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            z-index: 2001;
+            align-items: center;
+            justify-content: center;
+        }
+        .keyboard-visual-modal.active {
+            display: flex;
+        }
+        .keyboard-visual-panel {
+            background: rgba(8, 12, 16, 0.85);
+            border: none;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            position: relative;
+            backdrop-filter: blur(20px);
+        }
+        .keyboard-visual-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        .keyboard-visual-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .keyboard-visual-panel h2 {
+            margin: 0 0 24px 0;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.95);
+            letter-spacing: -0.3px;
+        }
+        .keyboard-visual-setting-item {
+            margin-bottom: 8px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .keyboard-visual-setting-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        .keyboard-visual-setting-item label {
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .keyboard-visual-setting-item input[type="checkbox"] {
+            margin-right: 12px;
+            margin-top: 1px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            accent-color: #1a5a3a;
+        }
+        .keyboard-visual-settings-btn {
+            background: rgba(26, 90, 58, 0.15);
+            border: none;
+            color: #2a7a5a;
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+        .keyboard-visual-settings-btn:hover {
+            background: rgba(26, 90, 58, 0.25);
+            color: #3a9a7a;
+        }
+        .keyboard-visual-setting-item .setting-description {
+            margin-top: 6px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.55);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.5;
+        }
+        #settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        #settings-modal.active {
+            display: flex;
+        }
+        #settings-panel {
+            background: rgba(8, 12, 16, 0.85);
+            border: none;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(20px);
+        }
+        @media (max-width: 768px) {
+            #settings-panel {
+                max-width: 95%;
+                padding: 24px;
+            }
+        }
+        .settings-category {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .settings-category.active {
+            display: flex;
+        }
+        #settings-panel h2 {
+            margin: 0 0 24px 0;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.95);
+            letter-spacing: -0.3px;
+        }
+        .settings-header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 16px;
+        }
+        .settings-header-sticky {
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(20px);
+            background: rgba(8, 12, 16, 0.7);
+            z-index: 11;
+            padding-top: 8px;
+            margin-top: -8px;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+        }
+        .settings-preset-dropdown {
+            position: relative;
+        }
+        .settings-preset-select {
+            padding: 6px 12px;
+            padding-right: 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+            min-width: 180px;
+        }
+        .settings-preset-select:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .settings-preset-select:focus {
+            outline: none;
+            border-color: rgba(26, 90, 58, 0.6);
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+        .settings-preset-select option {
+            background: rgba(40, 40, 55, 0.98);
+            color: #fff;
+            padding: 8px 14px;
+        }
+        .settings-navbar {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0;
+        }
+        .settings-navbar::-webkit-scrollbar {
+            height: 3px;
+        }
+        .settings-navbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+        .nav-tab {
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.55);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-bottom: -1px;
+            border-radius: 8px 8px 0 0;
+        }
+        .nav-tab:hover {
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .nav-tab.active {
+            color: rgba(255, 255, 255, 0.95);
+            border-bottom-color: rgba(26, 90, 58, 0.7);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .settings-category {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .settings-category.active {
+            display: flex;
+        }
+        .setting-item {
+            margin-bottom: 0;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .setting-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        .setting-item label {
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .setting-item input[type="checkbox"] {
+            margin-right: 12px;
+            margin-top: 1px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            accent-color: #1a5a3a;
+        }
+        .setting-description {
+            margin-top: 6px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.55);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.5;
+        }
+        .setting-cpu-warning {
+            margin-top: 6px;
+            font-size: 10px;
+            color: rgba(255, 170, 68, 0.8);
+            font-family: 'Inter', sans-serif;
+        }
+        .binaural-reverb-button {
+            background: rgba(26, 90, 58, 0.15);
+            border: none;
+            color: #2a7a5a;
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+        .binaural-reverb-button:hover {
+            background: rgba(26, 90, 58, 0.25);
+            color: #3a9a7a;
+        }
+        #settings-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            z-index: 100;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        #settings-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .light-badge {
+            display: inline-block;
+            background: rgba(26, 90, 58, 0.2);
+            color: #1a5a3a;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+        #settings-diff-panel {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 320px;
+            max-height: 100vh;
+            background: rgba(20, 20, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 999;
+            overflow-y: auto;
+            padding: 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            color: #fff;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+            display: none; /* Hidden by default */
+        }
+        #settings-diff-panel.visible {
+            display: block;
+        }
+        #settings-diff-panel h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a5a3a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        #settings-diff-panel .refresh-btn {
+            background: rgba(26, 90, 58, 0.2);
+            border: 1px solid rgba(26, 90, 58, 0.3);
+            color: #1a5a3a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        #settings-diff-panel .refresh-btn:hover {
+            background: rgba(26, 90, 58, 0.3);
+        }
+        #settings-diff-panel .diff-category {
+            margin-bottom: 16px;
+        }
+        #settings-diff-panel .diff-category-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #fff;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #settings-diff-panel .diff-item {
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        #settings-diff-panel .diff-item strong {
+            color: #1a5a3a;
+        }
+        #settings-diff-panel .no-diffs {
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+            padding: 12px;
+            text-align: center;
+        }
+        #settings-diff-panel .diff-content {
+            min-height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <h1>PriMIDI</h1>
+        <p class="subtitle">developed by <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Beats Away</a> in 2026 <span class="coffee-line">If you enjoy using this premium midi synth for free, <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">buy me a coffee ☕</a></span></p>
+        <div class="preset-section">
+            <label for="preset-select">sound preset:</label>
+            <select id="preset-select">
+                <option value="primal" selected>Primal</option>
+                <option value="cosmos">Cosmos</option>
+                <option value="livid">Livid</option>
+                <option value="bluish">Bluish</option>
+            </select>
+            <span id="keyboard-visual-icon">🎹</span>
+            <span id="settings-icon">🔊</span>
+            <span id="camera-icon">📷</span>
+            <span id="tutorial-icon">?</span>
+        </div>
+    </div>
+    <div id="settings-diff-panel">
+        <h3>
+            <span>Settings Differences</span>
+            <button class="refresh-btn" id="refresh-settings-diff">Refresh</button>
+        </h3>
+        <div class="diff-content" id="settings-diff-content">
+            <div class="no-diffs">Click "Refresh" to check differences</div>
+        </div>
+    </div>
+    <div id="settings-modal">
+        <div id="settings-panel">
+            <button id="settings-close">×</button>
+            <div class="settings-header-sticky">
+                <div class="settings-header-controls">
+                    <h2>Sound Settings</h2>
+                </div>
+                
+                <!-- Navigation Tabs - Simplified for Light Version -->
+                <div class="settings-navbar">
+                    <button class="nav-tab active" data-category="envelope">🎹 Amplitude Envelope</button>
+                    <button class="nav-tab" data-category="timbre">🎵 Timbre</button>
+                    <button class="nav-tab" data-category="frequency">🎚️ Frequency & Pitch</button>
+                    <button class="nav-tab" data-category="delay">🔊 Delay & Resonance</button>
+                </div>
+            </div>
+            
+            <!-- Amplitude Envelope Category -->
+            <div class="settings-category active" id="category-envelope">
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-velocity-attack" checked>
+                        <div>
+                            <strong>Velocity-Dependent Attack Time</strong>
+                            <div class="setting-description">
+                                Higher velocities produce faster attack times. Louder notes respond more quickly, matching real piano behavior.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: 1-5ms (attack phase)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Low impact</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-two-stage-decay" checked>
+                        <div>
+                            <strong>Two-Stage Decay</strong>
+                            <div class="setting-description">
+                                Realistic piano decay: fast initial decay followed by slower long decay. Velocity affects decay rates.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: 50ms (fast) → seconds (slow decay)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Low impact</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" checked disabled>
+                        <div>
+                            <strong>Primary Envelope Settings</strong>
+                            <button class="binaural-reverb-button" id="envelope-settings-btn">[...]</button>
+                            <div class="setting-description">
+                                Core amplitude envelope parameters: attack, decay, sustain, and release times. These control the fundamental shape of each note's amplitude over time.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: 1-2000ms (envelope phases)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: No impact</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-piano-envelope-model" checked>
+                        <div>
+                            <strong>Realistic Piano Envelope Model</strong>
+                            <button class="binaural-reverb-button" id="piano-envelope-model-settings-btn">[...]</button>
+                            <div class="setting-description">
+                                State-based decay times: different decay rates for key down+pedal, pedal only, key only, and no pedal/key states. Lower notes have longer decay (exponential). Matches real piano physics.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: 0.1-15s (decay phases)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Low impact</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-harmonic-profile-evolution" checked>
+                        <div>
+                            <strong>Harmonic Profile Evolution</strong>
+                            <button class="binaural-reverb-button" id="harmonic-profile-evolution-settings-btn">⚙️</button>
+                            <div class="setting-description">
+                                Higher harmonics decay 2-10x faster than lower harmonics, creating realistic spectral evolution over time. Key held maintains brightness, pedal only decays faster.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: Continuous (over note lifetime)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Medium impact</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-realistic-sustain" checked>
+                        <div>
+                            <strong>Realistic Piano Sustain System</strong>
+                            <div class="setting-description">
+                                Tracks note state (key down/up, pedal state) and smoothly transitions envelope parameters. Integrates with piano envelope model and harmonic evolution.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: Continuous (state transitions)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Medium impact</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Timbre Category -->
+            <div class="settings-category" id="category-timbre">
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-velocity-timbre" checked>
+                        <div>
+                            <strong>Velocity-Dependent Timbre</strong>
+                            <div class="setting-description">
+                                Higher velocities produce brighter sounds with more harmonics. Based on piano hammer-string physics.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: Instant (on note attack)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Low impact</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Frequency & Pitch Category -->
+            <div class="settings-category" id="category-frequency">
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-frequency-compensation" checked>
+                        <div>
+                            <strong>Frequency Compensation</strong>
+                            <button class="binaural-reverb-button" id="frequency-compensation-settings-btn">[...]</button>
+                            <div class="setting-description">
+                                Applies ISO 226 equal-loudness contour compensation to make notes sound equally loud across the piano range (A0-C8).
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: Instant (on note attack)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Medium impact (runs on every note)</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" checked disabled>
+                        <div>
+                            <strong>Velocity Mapping</strong>
+                            <button class="binaural-reverb-button" id="velocity-mapping-settings-btn">[...]</button>
+                            <div class="setting-description">
+                                Maps MIDI velocity (0-127) to amplitude using a power curve. Controls the "feel" of velocity response and applies frequency compensation for equal-loudness perception.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: Instant (on note attack)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Low impact (runs on every note)</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Delay & Resonance Category -->
+            <div class="settings-category" id="category-delay">
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-velocity-sensitive-delay" checked>
+                        <div>
+                            <strong>Velocity-Sensitive Delay</strong>
+                            <div class="setting-description">
+                                Delay mapped to velocity: softer playing = longer delays (50-500ms), harder playing = tighter delays. Not common on traditional pianos, but creative and useful for creating "living" sounds.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: 50-500ms (delay times)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Medium impact</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-sympathetic-resonance-delay" checked>
+                        <div>
+                            <strong>Sympathetic String Resonance Delay</strong>
+                            <div class="setting-description">
+                                Simulates natural piano resonance when sustain pedal is held. Creates frequency-dependent delay/reverb effect based on harmonic multiples. Delay time = 1/frequency of sympathetic string.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: Frequency-dependent (harmonic periods)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Medium impact</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-spectral-resonance-delay" checked>
+                        <div>
+                            <strong>Dynamic Frequency-Dependent Delay (Spectral Resonance)</strong>
+                            <div class="setting-description">
+                                Innovative feature: Frequency-dependent delays entangled with velocity. Lower frequencies get longer delays, velocity affects delay characteristics. Creates powerful "living" sounds through spectral analysis.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: Dynamic (frequency and velocity dependent)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: High impact</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-delay-pseudo-reverb" checked>
+                        <div>
+                            <strong>Delay Pseudo-Reverb (Stereo Widening)</strong>
+                            <button class="binaural-reverb-button" id="delay-pseudo-reverb-settings-btn">⚙️</button>
+                            <div class="setting-description">
+                                CPU-efficient alternative to reverb using multi-delay network. Crossover at 300Hz keeps bass mono, applies stereo delays to highs. Parallel delays (Left: 13ms, Right: 29ms, Center: 3ms) with feedback and modulation create spacious stereo image.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: 1-30ms (Haas/precedence effect)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Low-Medium impact (much more efficient than reverb)</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-tremolo" checked>
+                        <div>
+                            <strong>Chorus/Ping-Pong (Fake Binaural Movement)</strong>
+                            <button class="binaural-reverb-button" id="chorus-settings-btn">⚙️</button>
+                            <div class="setting-description">
+                                Creates a sense of spatial movement and depth with modulated delays and ping-pong stereo panning. Simulates subtle recording movement (fake binaural) - like someone subtly moving while recording. CPU-efficient alternative to true binaural processing.
+                                <br><span style="color: rgba(255, 255, 255, 0.5); font-size: 11px;">⏱️ Timescale: Continuous (LFO-modulated delays + ping-pong)</span>
+                            </div>
+                            <div class="setting-cpu-warning">CPU: Low-Medium impact</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+    <!-- Web Audio API Engine (replaces Tone.js) -->
+    <script src="audio/web-audio-engine/additive-synth.js"></script>
+    <script src="audio/web-audio-engine/poly-synth-wrapper.js"></script>
+    <!-- Audio Processing Modules -->
+    <script src="audio/physics-settings/physics-settings.js"></script>
+    <!-- Pitch-dependent harmonic rolloff (bass has more harmonics than treble) -->
+    <script src="audio/pitch-harmonic-rolloff/pitch-harmonic-rolloff-settings.js"></script>
+    <script src="audio/pitch-harmonic-rolloff/pitch-harmonic-rolloff.js"></script>
+    <!-- Odd/even harmonic balance (pianos emphasize odd harmonics) -->
+    <script src="audio/odd-even-harmonic-balance/odd-even-harmonic-balance-settings.js"></script>
+    <script src="audio/odd-even-harmonic-balance/odd-even-harmonic-balance.js"></script>
+    <!-- Time-varying brightness (harmonics evolve during note) -->
+    <script src="audio/time-varying-brightness/time-varying-brightness-settings.js"></script>
+    <script src="audio/time-varying-brightness/time-varying-brightness.js"></script>
+    <script src="audio/velocity-timbre/velocity-timbre.js"></script>
+    <script src="audio/velocity-attack/velocity-attack.js"></script>
+    <script src="audio/two-stage-decay/two-stage-decay.js"></script>
+    <script src="audio/frequency-compensation/frequency-compensation.js"></script>
+    <script src="audio/frequency-compensation/frequency-compensation-settings.js"></script>
+    <script src="audio/velocity-mapping-two-stage/velocity-mapping-two-stage.js"></script>
+    <script src="audio/velocity-mapping-two-stage/velocity-mapping-settings.js"></script>
+    <script src="audio/envelope-settings/envelope-settings.js"></script>
+    <script src="audio/inharmonicity/inharmonicity.js"></script>
+    <script src="audio/per-partial-decay/per-partial-decay.js"></script>
+    <script src="audio/sustain-decay/sustain-decay.js"></script>
+    <!-- Enhanced Attack Noise (Meeting 4: Realistic hammer strike transients) -->
+    <script src="audio/attack-noise/attack-noise.js"></script>
+    <!-- New Research Features: Delay & Resonance -->
+    <script src="audio/velocity-sensitive-delay/velocity-sensitive-delay.js"></script>
+    <script src="audio/sympathetic-resonance-delay/sympathetic-resonance-delay.js"></script>
+    <script src="audio/spectral-resonance-delay/spectral-resonance-delay.js"></script>
+    <!-- Delay Pseudo-Reverb (CPU-efficient stereo widening) -->
+    <script src="audio/delay-pseudo-reverb/delay-pseudo-reverb.js"></script>
+    <script src="audio/delay-pseudo-reverb/delay-pseudo-reverb-settings.js"></script>
+    <script src="audio/tremolo/tremolo.js"></script>
+    <script src="audio/tremolo/tremolo-settings.js"></script>
+    <!-- New Research Features: Sustain Physics -->
+    <script src="audio/piano-envelope-model/piano-envelope-model.js"></script>
+    <script src="audio/piano-envelope-model/piano-envelope-model-settings.js"></script>
+    <script src="audio/harmonic-profile-evolution/harmonic-profile-evolution.js"></script>
+    <script src="audio/harmonic-profile-evolution/harmonic-profile-evolution-settings.js"></script>
+    <script src="audio/realistic-sustain/realistic-sustain.js"></script>
+    <!-- Keyboard Visual & Input Modules -->
+    <script src="keyboard/key-highlight/key-highlight.js"></script>
+    <script src="keyboard/key-movement/key-movement.js"></script>
+    <script src="keyboard/key-labels/key-labels.js"></script>
+    <script src="keyboard/keypress-input/keypress-input.js"></script>
+    <script src="keyboard/keyboard-visual-settings/keyboard-visual-settings.js"></script>
+    <script src="keyboard/midi-debug/midi-debug.js"></script>
+    <!-- MIDI Modules -->
+    <script src="midi/midi-input/midi-input.js"></script>
+    <script src="midi/midi-mapping/midi-mapping.js"></script>
+    <script type="module" src="main.js"></script>
+    <script>
+        // Initialize keyboard visual settings when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize keyboard visual settings module
+            if (window.initKeyboardVisualSettings) {
+                window.initKeyboardVisualSettings();
+            }
+            
+            // Toggle subtitle and preset section when clicking on the title
+            const title = document.querySelector('.overlay h1');
+            const subtitle = document.querySelector('.overlay .subtitle');
+            const presetSection = document.querySelector('.overlay .preset-section');
+            
+            if (title && subtitle && presetSection) {
+                title.addEventListener('click', () => {
+                    subtitle.classList.toggle('hidden');
+                    presetSection.classList.toggle('hidden');
+                });
+            }
+            
+            // Set up click handler for 🎹 emoji
+            const keyboardVisualIcon = document.getElementById('keyboard-visual-icon');
+            if (keyboardVisualIcon && window.showKeyboardVisualSettings) {
+                keyboardVisualIcon.addEventListener('click', () => {
+                    window.showKeyboardVisualSettings();
+                });
+            }
+            
+            // Settings modal toggle
+            const settingsIcon = document.getElementById('settings-icon');
+            const settingsModal = document.getElementById('settings-modal');
+            const settingsClose = document.getElementById('settings-close');
+            
+            if (settingsIcon && settingsModal) {
+                settingsIcon.addEventListener('click', () => {
+                    settingsModal.classList.add('active');
+                    // Auto-refresh settings diff when settings modal opens
+                    if (window.logSettingsDifferences) {
+                        setTimeout(() => {
+                            window.logSettingsDifferences();
+                        }, 100);
+                    }
+                });
+            }
+            
+            if (settingsClose && settingsModal) {
+                settingsClose.addEventListener('click', () => {
+                    settingsModal.classList.remove('active');
+                });
+            }
+            
+            // Settings category tabs
+            const navTabs = document.querySelectorAll('.nav-tab');
+            const categories = document.querySelectorAll('.settings-category');
+            
+            navTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const category = tab.getAttribute('data-category');
+                    
+                    // Update active tab
+                    navTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Update active category
+                    categories.forEach(c => c.classList.remove('active'));
+                    const targetCategory = document.getElementById(`category-${category}`);
+                    if (targetCategory) {
+                        targetCategory.classList.add('active');
+                    }
+                });
+            });
+            
+            // Settings diff panel refresh button
+            const refreshBtn = document.getElementById('refresh-settings-diff');
+            if (refreshBtn && window.logSettingsDifferences) {
+                refreshBtn.addEventListener('click', () => {
+                    window.logSettingsDifferences();
+                });
+            }
+            
+            // Camera toggle functionality - cycles through 5 views
+            const cameraIcon = document.getElementById('camera-icon');
+            let currentCameraView = 0; // Track current camera view (0, 1, 2, 3, 4, or 5)
+            
+            // Camera view 0: Default camera settings (first view on page load)
+            const cameraView0 = {
+                position: { x: 0.995, y: 1.338, z: 1.232 },
+                rotation: { x: -0.826, y: 0.501, z: 0.480 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 1: Alternate camera settings
+            const cameraView1 = {
+                position: { x: 0.750, y: 1.326, z: 1.407 },
+                rotation: { x: -0.756, y: 0.370, z: 0.328 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 2: Third camera settings
+            const cameraView2 = {
+                position: { x: 0.000, y: 1.060, z: 2.382 },
+                rotation: { x: -0.419, y: 0.000, z: 0.000 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 3: Fourth camera settings
+            const cameraView3 = {
+                position: { x: -0.808, y: 1.398, z: 1.652 },
+                rotation: { x: -0.702, y: -0.357, z: -0.288 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 4: Fifth camera settings
+            const cameraView4 = {
+                position: { x: 2.302, y: 1.176, z: -0.018 },
+                rotation: { x: -1.586, y: 1.098, z: 1.588 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 5: Sixth camera settings
+            const cameraView5 = {
+                position: { x: 0.003, y: 3.821, z: 2.390 },
+                rotation: { x: -1.012, y: 0.001, z: 0.001 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Array of all camera views for easy cycling
+            const cameraViews = [cameraView0, cameraView1, cameraView2, cameraView3, cameraView4, cameraView5];
+            
+            // Universal camera transition function
+            // Gradually transitions camera parameters to target settings
+            // Made globally available for use elsewhere
+            window.transitionCameraTo = function(targetView, duration = 1000, tolerance = 0.01) {
+                if (!window.camera || !window.controls) {
+                    console.warn('Camera or controls not available');
+                    return;
+                }
+                
+                const camera = window.camera;
+                const controls = window.controls;
+                
+                // Get current values
+                const startPosition = {
+                    x: camera.position.x,
+                    y: camera.position.y,
+                    z: camera.position.z
+                };
+                const startRotation = {
+                    x: camera.rotation.x,
+                    y: camera.rotation.y,
+                    z: camera.rotation.z
+                };
+                const startTarget = {
+                    x: controls.target.x,
+                    y: controls.target.y,
+                    z: controls.target.z
+                };
+                
+                // Target values
+                const targetPosition = targetView.position;
+                const targetRotation = targetView.rotation;
+                const targetTarget = targetView.target;
+                
+                const startTime = performance.now();
+                
+                function animate() {
+                    const elapsed = performance.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Easing function (ease-in-out)
+                    const eased = progress < 0.5
+                        ? 2 * progress * progress
+                        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                    
+                    // Interpolate position
+                    const currentPosition = {
+                        x: startPosition.x + (targetPosition.x - startPosition.x) * eased,
+                        y: startPosition.y + (targetPosition.y - startPosition.y) * eased,
+                        z: startPosition.z + (targetPosition.z - startPosition.z) * eased
+                    };
+                    
+                    // Interpolate rotation
+                    const currentRotation = {
+                        x: startRotation.x + (targetRotation.x - startRotation.x) * eased,
+                        y: startRotation.y + (targetRotation.y - startRotation.y) * eased,
+                        z: startRotation.z + (targetRotation.z - startRotation.z) * eased
+                    };
+                    
+                    // Interpolate target
+                    const currentTarget = {
+                        x: startTarget.x + (targetTarget.x - startTarget.x) * eased,
+                        y: startTarget.y + (targetTarget.y - startTarget.y) * eased,
+                        z: startTarget.z + (targetTarget.z - startTarget.z) * eased
+                    };
+                    
+                    // Apply values
+                    camera.position.set(currentPosition.x, currentPosition.y, currentPosition.z);
+                    camera.rotation.set(currentRotation.x, currentRotation.y, currentRotation.z);
+                    controls.target.set(currentTarget.x, currentTarget.y, currentTarget.z);
+                    controls.update();
+                    
+                    // Check if we're close enough to target (within tolerance)
+                    const positionDiff = Math.sqrt(
+                        Math.pow(currentPosition.x - targetPosition.x, 2) +
+                        Math.pow(currentPosition.y - targetPosition.y, 2) +
+                        Math.pow(currentPosition.z - targetPosition.z, 2)
+                    );
+                    const rotationDiff = Math.sqrt(
+                        Math.pow(currentRotation.x - targetRotation.x, 2) +
+                        Math.pow(currentRotation.y - targetRotation.y, 2) +
+                        Math.pow(currentRotation.z - targetRotation.z, 2)
+                    );
+                    const targetDiff = Math.sqrt(
+                        Math.pow(currentTarget.x - targetTarget.x, 2) +
+                        Math.pow(currentTarget.y - targetTarget.y, 2) +
+                        Math.pow(currentTarget.z - targetTarget.z, 2)
+                    );
+                    
+                    // Continue animation if not complete
+                    if (progress < 1 && (positionDiff > tolerance || rotationDiff > tolerance || targetDiff > tolerance)) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Snap to exact target values at the end
+                        camera.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
+                        camera.rotation.set(targetRotation.x, targetRotation.y, targetRotation.z);
+                        controls.target.set(targetTarget.x, targetTarget.y, targetTarget.z);
+                        controls.update();
+                    }
+                }
+                
+                animate();
+            }
+            
+            // Function to apply a camera view (with smooth transition)
+            function applyCameraView(viewIndex) {
+                const view = cameraViews[viewIndex];
+                if (view) {
+                    window.transitionCameraTo(view, 1000, 0.01); // 1 second transition, 0.01 tolerance
+                }
+            }
+            
+            // Function to setup camera toggle (waits for camera/controls to be available)
+            function setupCameraToggle() {
+                if (cameraIcon && window.camera && window.controls) {
+                    cameraIcon.addEventListener('click', () => {
+                        // Cycle to next view (0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 0)
+                        currentCameraView = (currentCameraView + 1) % 6;
+                        applyCameraView(currentCameraView);
+                    });
+                } else {
+                    // Retry after a short delay if camera/controls not ready yet
+                    setTimeout(setupCameraToggle, 100);
+                }
+            }
+            
+            // Initialize camera toggle
+            setupCameraToggle();
+            
+            // Tutorial button handler
+            const tutorialIcon = document.getElementById('tutorial-icon');
+            let currentTutorialStep = 0;
+            const tutorialSteps = [
+                {
+                    target: 'keyboard-visual-icon',
+                    text: 'To use this synth you need a MIDI controller connected by USB.',
+                    position: 'bottom',
+                    arrow: 'top'
+                },
+                {
+                    target: 'keyboard-visual-icon',
+                    text: 'Click the emoji piano can customise how you want to visualise your piano here.',
+                    position: 'bottom',
+                    arrow: 'top'
+                },
+                {
+                    target: 'settings-icon',
+                    text: 'All sound modules settings can be found here.',
+                    position: 'bottom',
+                    arrow: 'top'
+                },
+                {
+                    target: 'preset-select',
+                    text: 'The sound modules settings have been adjusted differently to make the sound presets.',
+                    position: 'bottom',
+                    arrow: 'top'
+                },
+                {
+                    target: 'camera-icon',
+                    text: 'Click this can toggle camera view.',
+                    position: 'bottom',
+                    arrow: 'top'
+                }
+            ];
+            
+            function showTutorial() {
+                const overlay = document.getElementById('tutorial-overlay');
+                if (!overlay) {
+                    // Create tutorial overlay
+                    const tutorialOverlay = document.createElement('div');
+                    tutorialOverlay.id = 'tutorial-overlay';
+                    tutorialOverlay.className = 'tutorial-overlay active';
+                    document.body.appendChild(tutorialOverlay);
+                    // Use setTimeout to ensure DOM is ready
+                    setTimeout(() => {
+                        showTutorialStep(0);
+                    }, 10);
+                } else {
+                    overlay.classList.add('active');
+                    showTutorialStep(0);
+                }
+            }
+            
+            function showTutorialStep(stepIndex) {
+                if (stepIndex >= tutorialSteps.length) {
+                    closeTutorial();
+                    return;
+                }
+                
+                currentTutorialStep = stepIndex;
+                const step = tutorialSteps[stepIndex];
+                const targetElement = document.getElementById(step.target);
+                const overlay = document.getElementById('tutorial-overlay');
+                
+                if (!targetElement || !overlay) {
+                    console.warn('Tutorial: target element or overlay not found');
+                    return;
+                }
+                
+                // Ensure overlay is active
+                overlay.classList.add('active');
+                
+                // Remove highlight from previous element
+                const previousHighlight = document.querySelector('.tutorial-highlight');
+                if (previousHighlight) {
+                    previousHighlight.classList.remove('tutorial-highlight');
+                }
+                
+                // Add highlight to current target element
+                targetElement.classList.add('tutorial-highlight');
+                
+                // Remove existing bubble
+                const existingBubble = overlay.querySelector('.tutorial-bubble');
+                if (existingBubble) {
+                    existingBubble.remove();
+                }
+                
+                // Get target element position
+                const rect = targetElement.getBoundingClientRect();
+                const bubble = document.createElement('div');
+                bubble.className = `tutorial-bubble arrow-${step.arrow}`;
+                
+                // Position bubble
+                let left, top;
+                if (step.position === 'bottom') {
+                    left = rect.left + (rect.width / 2) - 140; // Center horizontally, offset for max-width
+                    top = rect.bottom + 20;
+                } else if (step.position === 'top') {
+                    left = rect.left + (rect.width / 2) - 140;
+                    top = rect.top - 120;
+                } else if (step.position === 'left') {
+                    left = rect.left - 300;
+                    top = rect.top + (rect.height / 2) - 40;
+                } else {
+                    left = rect.right + 20;
+                    top = rect.top + (rect.height / 2) - 40;
+                }
+                
+                // Keep bubble within viewport
+                left = Math.max(20, Math.min(left, window.innerWidth - 300));
+                top = Math.max(20, Math.min(top, window.innerHeight - 150));
+                
+                bubble.style.left = left + 'px';
+                bubble.style.top = top + 'px';
+                
+                // Add content
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'tutorial-close';
+                closeBtn.textContent = '×';
+                closeBtn.onclick = closeTutorial;
+                
+                const text = document.createElement('div');
+                text.textContent = step.text;
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'tutorial-next';
+                nextBtn.textContent = stepIndex === tutorialSteps.length - 1 ? 'Got it!' : 'Next';
+                nextBtn.onclick = () => showTutorialStep(stepIndex + 1);
+                
+                bubble.appendChild(closeBtn);
+                bubble.appendChild(text);
+                bubble.appendChild(nextBtn);
+                overlay.appendChild(bubble);
+            }
+            
+            function closeTutorial() {
+                const overlay = document.getElementById('tutorial-overlay');
+                if (overlay) {
+                    overlay.classList.remove('active');
+                    const bubble = overlay.querySelector('.tutorial-bubble');
+                    if (bubble) {
+                        bubble.remove();
+                    }
+                }
+                // Remove highlight from any element
+                const highlighted = document.querySelector('.tutorial-highlight');
+                if (highlighted) {
+                    highlighted.classList.remove('tutorial-highlight');
+                }
+                currentTutorialStep = 0;
+            }
+            
+            if (tutorialIcon) {
+                tutorialIcon.addEventListener('click', showTutorial);
+            }
+            
+            // Tutorial prompt on page load
+            function showTutorialPrompt() {
+                // Check if user has chosen to never show this again
+                const neverShowAgain = localStorage.getItem('tutorialNeverShowAgain');
+                if (neverShowAgain === 'true') {
+                    return; // Don't show prompt
+                }
+                
+                // Create prompt modal if it doesn't exist
+                let promptModal = document.getElementById('tutorial-prompt-modal');
+                if (!promptModal) {
+                    promptModal = document.createElement('div');
+                    promptModal.id = 'tutorial-prompt-modal';
+                    promptModal.className = 'tutorial-prompt-modal';
+                    
+                    const panel = document.createElement('div');
+                    panel.className = 'tutorial-prompt-panel';
+                    
+                    const title = document.createElement('h3');
+                    title.innerHTML = 'Welcome to <span style="font-family: \'Amarante\', serif; font-weight: 400;">PriMIDI</span>';
+                    
+                    const text = document.createElement('p');
+                    text.textContent = 'Would you like to see a quick tutorial guide to learn about the features?';
+                    
+                    const checkboxContainer = document.createElement('div');
+                    checkboxContainer.className = 'tutorial-prompt-checkbox';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = 'tutorial-never-ask';
+                    const checkboxLabel = document.createElement('label');
+                    checkboxLabel.htmlFor = 'tutorial-never-ask';
+                    checkboxLabel.textContent = 'Never ask this again';
+                    checkboxContainer.appendChild(checkbox);
+                    checkboxContainer.appendChild(checkboxLabel);
+                    
+                    const buttons = document.createElement('div');
+                    buttons.className = 'tutorial-prompt-buttons';
+                    
+                    const yesBtn = document.createElement('button');
+                    yesBtn.className = 'tutorial-prompt-btn tutorial-prompt-btn-primary';
+                    yesBtn.textContent = 'Yes, show tutorial';
+                    yesBtn.onclick = () => {
+                        if (checkbox.checked) {
+                            localStorage.setItem('tutorialNeverShowAgain', 'true');
+                        }
+                        promptModal.classList.remove('active');
+                        setTimeout(() => {
+                            showTutorial();
+                        }, 300);
+                    };
+                    
+                    const noBtn = document.createElement('button');
+                    noBtn.className = 'tutorial-prompt-btn tutorial-prompt-btn-secondary';
+                    noBtn.textContent = 'No, thanks';
+                    noBtn.onclick = () => {
+                        if (checkbox.checked) {
+                            localStorage.setItem('tutorialNeverShowAgain', 'true');
+                        }
+                        promptModal.classList.remove('active');
+                    };
+                    
+                    buttons.appendChild(noBtn);
+                    buttons.appendChild(yesBtn);
+                    
+                    panel.appendChild(title);
+                    panel.appendChild(text);
+                    panel.appendChild(checkboxContainer);
+                    panel.appendChild(buttons);
+                    promptModal.appendChild(panel);
+                    document.body.appendChild(promptModal);
+                }
+                
+                // Show the prompt
+                promptModal.classList.add('active');
+            }
+            
+            // Show tutorial prompt on page load (after a short delay)
+            setTimeout(() => {
+                showTutorialPrompt();
+            }, 1000);
+            
+            // Initial refresh after a short delay to ensure all modules are loaded
+            if (window.logSettingsDifferences) {
+                setTimeout(() => {
+                    window.logSettingsDifferences();
+                }, 500);
+            }
+            
+            // Load cosmos preset on page load and update dropdown
+            // Wait for applySoundPreset to be available
+            function loadCosmosPresetOnInit() {
+                if (window.applySoundPreset) {
+                    // Apply cosmos preset
+                    console.log('Loading cosmos preset on page load...');
+                    window.applySoundPreset('cosmos');
+                    
+                    // Update dropdown to show cosmos
+                    const presetSelect = document.getElementById('preset-select');
+                    if (presetSelect) {
+                        presetSelect.value = 'cosmos';
+                    }
+                } else {
+                    // Retry after a short delay
+                    setTimeout(loadCosmosPresetOnInit, 100);
+                }
+            }
+            
+            // Start loading cosmos preset after a delay to ensure all modules are initialized
+            setTimeout(loadCosmosPresetOnInit, 800);
+            
+            // Preset dropdown handler
+            const presetSelect = document.getElementById('preset-select');
+            if (presetSelect) {
+                // Track the value before it gets cleared
+                let pendingSelection = null;
+                
+                // Use input event which fires when selection changes - process preset here directly
+                presetSelect.addEventListener('input', function(e) {
+                    const selectedIndex = e.target.selectedIndex;
+                    const presetName = selectedIndex >= 0 && selectedIndex < e.target.options.length 
+                        ? e.target.options[selectedIndex].value 
+                        : (e.target.value || null);
+                    
+                    if (presetName) {
+                        pendingSelection = presetName;
+                        // Process the preset immediately in input event
+                        processPresetSelection(presetName);
+                    }
+                });
+                
+                // Function to process preset selection
+                function processPresetSelection(presetName) {
+                    if (!presetName) return;
+                    
+                    console.log(`Dropdown changed to: ${presetName}`);
+                    
+                    // Store the value FIRST to preserve it
+                    const selectedValue = presetName;
+                    
+                    // Function to apply preset (with retry logic)
+                    function tryApplyPreset() {
+                        if (window.applySoundPreset) {
+                            console.log('Calling applySoundPreset...');
+                            
+                            try {
+                                window.applySoundPreset(selectedValue);
+                            } catch (error) {
+                                console.error('Error calling applySoundPreset:', error);
+                            }
+                            
+                            // Ensure dropdown value stays
+                            if (presetSelect.value !== selectedValue) {
+                                presetSelect.value = selectedValue;
+                            }
+                        } else {
+                            console.warn('applySoundPreset not available yet, retrying...');
+                            setTimeout(tryApplyPreset, 100);
+                        }
+                    }
+                    
+                    // Try to apply preset
+                    tryApplyPreset();
+                    
+                    // Also ensure value is preserved after a delay
+                    setTimeout(() => {
+                        if (presetSelect.value !== selectedValue) {
+                            presetSelect.value = selectedValue;
+                        }
+                    }, 200);
+                }
+                
+                // Also handle change event as fallback (but input should fire first)
+                presetSelect.addEventListener('change', function(e) {
+                    // Only process if we didn't already process via input event
+                    if (pendingSelection) {
+                        // Already processed in input event, just clear the flag
+                        pendingSelection = null;
+                        return;
+                    }
+                    
+                    // Fallback: try to get value if input event didn't fire
+                    const selectedIndex = e.target.selectedIndex;
+                    const presetName = selectedIndex >= 0 && selectedIndex < e.target.options.length 
+                        ? e.target.options[selectedIndex].value 
+                        : (e.target.value || null);
+                    
+                    if (presetName) {
+                        processPresetSelection(presetName);
+                    }
+                });
+            }
+            
+            // Keyboard shortcut: Shift+S to toggle settings diff panel
+            window.addEventListener('keydown', (e) => {
+                if (e.shiftKey && e.key === 'S') {
+                    e.preventDefault();
+                    const diffPanel = document.getElementById('settings-diff-panel');
+                    if (diffPanel) {
+                        diffPanel.classList.toggle('visible');
+                        // Refresh differences when showing
+                        if (diffPanel.classList.contains('visible') && window.logSettingsDifferences) {
+                            setTimeout(() => {
+                                window.logSettingsDifferences();
+                            }, 50);
+                        }
+                    }
+                }
+                
+                // Keyboard shortcut: 9 to log camera settings (for debug and future use)
+                if (e.key === '9' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    if (window.camera && window.controls) {
+                        const camera = window.camera;
+                        const controls = window.controls;
+                        const cameraSettings = {
+                            position: {
+                                x: camera.position.x.toFixed(3),
+                                y: camera.position.y.toFixed(3),
+                                z: camera.position.z.toFixed(3)
+                            },
+                            rotation: {
+                                x: camera.rotation.x.toFixed(3),
+                                y: camera.rotation.y.toFixed(3),
+                                z: camera.rotation.z.toFixed(3)
+                            },
+                            fov: camera.fov,
+                            aspect: camera.aspect,
+                            near: camera.near,
+                            far: camera.far,
+                            target: {
+                                x: controls.target.x.toFixed(3),
+                                y: controls.target.y.toFixed(3),
+                                z: controls.target.z.toFixed(3)
+                            },
+                            minDistance: controls.minDistance,
+                            maxDistance: controls.maxDistance,
+                            enableDamping: controls.enableDamping,
+                            dampingFactor: controls.dampingFactor,
+                            enableRotate: controls.enableRotate,
+                            enableZoom: controls.enableZoom,
+                            enablePan: controls.enablePan
+                        };
+                        console.log('📷 Camera Settings:', cameraSettings);
+                        console.log('📋 Copy-paste format:', JSON.stringify(cameraSettings, null, 2));
+                    } else {
+                        console.warn('Camera or controls not available yet');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
