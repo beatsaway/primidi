@@ -1,1 +1,788 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriMIDI</title>
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amarante&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block;
+            z-index: 1;
+            filter: blur(3px);
+            opacity: 0.4;
+        }
+        
+        /* Screen effect overlays */
+        .screen-effects {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+        
+        .screen-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+        }
+        
+        .screen-effect.active {
+            opacity: 1;
+        }
+        
+        /* Vignette effect */
+        .effect-vignette {
+            background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+            mix-blend-mode: multiply;
+        }
+        
+        /* Color tint overlays */
+        .effect-warm-tint {
+            background: linear-gradient(135deg, rgba(255, 200, 150, 0.15) 0%, rgba(255, 150, 100, 0.1) 100%);
+            mix-blend-mode: color-dodge;
+        }
+        
+        .effect-cool-tint {
+            background: linear-gradient(45deg, rgba(150, 200, 255, 0.15) 0%, rgba(100, 150, 255, 0.1) 100%);
+            mix-blend-mode: color-dodge;
+        }
+        
+        .effect-purple-tint {
+            background: linear-gradient(90deg, rgba(200, 150, 255, 0.12) 0%, rgba(150, 100, 255, 0.08) 100%);
+            mix-blend-mode: color-dodge;
+        }
+        
+        .effect-green-tint {
+            background: linear-gradient(180deg, rgba(150, 255, 200, 0.1) 0%, rgba(100, 255, 150, 0.08) 100%);
+            mix-blend-mode: color-dodge;
+        }
+        
+        /* Film grain */
+        .effect-grain {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.3'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+            animation: grain 0.5s steps(6) infinite;
+        }
+        
+        @keyframes grain {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-5%, -10%); }
+            20% { transform: translate(-15%, 5%); }
+            30% { transform: translate(7%, -25%); }
+            40% { transform: translate(-5%, 25%); }
+            50% { transform: translate(-15%, 10%); }
+            60% { transform: translate(15%, 0%); }
+            70% { transform: translate(0%, 15%); }
+            80% { transform: translate(3%, 35%); }
+            90% { transform: translate(-10%, 10%); }
+        }
+        
+        /* Scanlines */
+        .effect-scanlines {
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1) 0px,
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            mix-blend-mode: overlay;
+        }
+        
+        /* Light leak */
+        .effect-light-leak {
+            background: radial-gradient(
+                ellipse at 20% 50%,
+                rgba(255, 200, 100, 0.2) 0%,
+                transparent 50%
+            ),
+            radial-gradient(
+                ellipse at 80% 20%,
+                rgba(150, 200, 255, 0.15) 0%,
+                transparent 50%
+            );
+            mix-blend-mode: screen;
+        }
+        
+        /* Chromatic aberration */
+        .effect-chromatic {
+            background: 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.1) 0%, transparent 50%),
+                linear-gradient(90deg, transparent 50%, rgba(0, 0, 255, 0.1) 100%);
+            mix-blend-mode: screen;
+            filter: blur(0.5px);
+        }
+        
+        /* Subtle glow */
+        .effect-glow {
+            background: radial-gradient(
+                circle at 50% 50%,
+                rgba(255, 255, 255, 0.05) 0%,
+                transparent 70%
+            );
+            mix-blend-mode: screen;
+        }
+        
+        /* Color shift */
+        .effect-color-shift {
+            background: linear-gradient(
+                45deg,
+                rgba(255, 150, 150, 0.08) 0%,
+                rgba(150, 255, 200, 0.08) 50%,
+                rgba(150, 200, 255, 0.08) 100%
+            );
+            mix-blend-mode: color-dodge;
+            animation: colorShift 8s ease-in-out infinite;
+        }
+        
+        @keyframes colorShift {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(15deg); }
+        }
+        
+        /* Subtle pulse */
+        .effect-pulse {
+            background: radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0.03) 0%,
+                transparent 60%
+            );
+            mix-blend-mode: screen;
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        h1 {
+            margin: 0;
+            font-family: "Amarante", serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 96px;
+            color: #ffffff;
+            letter-spacing: 2px;
+            cursor: pointer;
+            line-height: 1.2;
+            transition: opacity 0.2s ease;
+            user-select: none;
+            margin-bottom: 12px;
+            pointer-events: auto;
+        }
+        
+        h1 a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        h1:hover {
+            opacity: 0.8;
+        }
+        
+        .subtitle {
+            margin: 12px 0 0 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            text-align: center;
+            max-width: 700px;
+            line-height: 1.8;
+        }
+        
+        .developer-credits {
+            margin-top: 48px;
+            font-family: 'Inter', sans-serif;
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            line-height: 1.6;
+            pointer-events: auto;
+        }
+        
+        .developer-credits a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        .developer-credits a:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .developer-credits .beats-away-link {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .developer-credits .beats-away-link:hover {
+            color: #ffffff;
+        }
+        
+        .launch-button {
+            margin-top: 32px;
+            padding: 16px 48px;
+            font-family: 'Inter', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            pointer-events: auto;
+            backdrop-filter: blur(10px);
+            letter-spacing: 0.5px;
+        }
+        
+        .launch-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .launch-button:active {
+            transform: translateY(0);
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 72px;
+            }
+            
+            .subtitle {
+                font-size: 20px;
+            }
+            
+            .developer-credits {
+                font-size: 18px;
+            }
+            
+            .launch-button {
+                font-size: 16px;
+                padding: 14px 40px;
+                margin-top: 28px;
+            }
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="screen-effects" id="screenEffects"></div>
+    
+    <div class="overlay">
+        <h1><a href="primidi_v1_06/index.html">PriMIDI</a></h1>
+        <p class="subtitle">• Premium MIDI synthesiser <br> ( free to use ) <br>• Research-based sound design <br>• 100% Physical modeling synthesis <br>• Without any sampling </p>
+        <p class="developer-credits">
+            Developed by <a href="http://youtube.com/beatsaway" target="_blank" rel="noopener noreferrer" class="beats-away-link">Beats Away</a>. <br>
+            <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Support this developer</a>.
+        </p>
+        <a href="primidi_v1_06/index.html" class="launch-button">Launch App</a>
+    </div>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+        
+        // Make THREE available globally
+        window.THREE = THREE;
+        
+        // Create scene
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x001007);
+        
+        // Create camera
+        const camera = new THREE.PerspectiveCamera(
+            50,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(0.995, 1.338, 1.232);
+        camera.rotation.set(-0.826, 0.501, 0.480);
+        camera.fov = 50;
+        camera.updateProjectionMatrix();
+        
+        // Create renderer
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: "high-performance",
+            alpha: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.domElement.style.position = 'fixed';
+        renderer.domElement.style.top = '0';
+        renderer.domElement.style.left = '0';
+        renderer.domElement.style.margin = '0';
+        renderer.domElement.style.padding = '0';
+        renderer.domElement.style.zIndex = '1';
+        document.body.appendChild(renderer.domElement);
+        
+        // Add orbit controls (disabled for automatic transitions)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0.000, 0.000, 0.000);
+        controls.enabled = false; // Disable manual control
+        controls.update();
+        
+        // Make camera and controls available globally
+        window.camera = camera;
+        window.controls = controls;
+        
+        // Camera views from v1_06
+        const cameraViews = [
+            {
+                position: { x: 0.995, y: 1.338, z: 1.232 },
+                rotation: { x: -0.826, y: 0.501, z: 0.480 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            },
+            {
+                position: { x: 0.750, y: 1.326, z: 1.407 },
+                rotation: { x: -0.756, y: 0.370, z: 0.328 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            },
+            {
+                position: { x: 0.000, y: 1.060, z: 2.382 },
+                rotation: { x: -0.419, y: 0.000, z: 0.000 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            },
+            {
+                position: { x: -0.808, y: 1.398, z: 1.652 },
+                rotation: { x: -0.702, y: -0.357, z: -0.288 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            },
+            {
+                position: { x: 2.302, y: 1.176, z: -0.018 },
+                rotation: { x: -1.586, y: 1.098, z: 1.588 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            },
+            {
+                position: { x: 0.003, y: 3.821, z: 2.390 },
+                rotation: { x: -1.012, y: 0.001, z: 0.001 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            }
+        ];
+        
+        // Camera transition function - continuous, never stops
+        function transitionCameraTo(targetView, duration = 7000) {
+            const startPosition = {
+                x: camera.position.x,
+                y: camera.position.y,
+                z: camera.position.z
+            };
+            const startRotation = {
+                x: camera.rotation.x,
+                y: camera.rotation.y,
+                z: camera.rotation.z
+            };
+            const startTarget = {
+                x: controls.target.x,
+                y: controls.target.y,
+                z: controls.target.z
+            };
+            
+            const targetPosition = targetView.position;
+            const targetRotation = targetView.rotation;
+            const targetTarget = targetView.target;
+            
+            const startTime = performance.now();
+            
+            function animate() {
+                const elapsed = performance.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing function (ease-in-out)
+                const eased = progress < 0.5
+                    ? 2 * progress * progress
+                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                
+                // Interpolate
+                camera.position.set(
+                    startPosition.x + (targetPosition.x - startPosition.x) * eased,
+                    startPosition.y + (targetPosition.y - startPosition.y) * eased,
+                    startPosition.z + (targetPosition.z - startPosition.z) * eased
+                );
+                camera.rotation.set(
+                    startRotation.x + (targetRotation.x - startRotation.x) * eased,
+                    startRotation.y + (targetRotation.y - startRotation.y) * eased,
+                    startRotation.z + (targetRotation.z - startRotation.z) * eased
+                );
+                controls.target.set(
+                    startTarget.x + (targetTarget.x - startTarget.x) * eased,
+                    startTarget.y + (targetTarget.y - startTarget.y) * eased,
+                    startTarget.z + (targetTarget.z - startTarget.z) * eased
+                );
+                controls.update();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Snap to exact target
+                    camera.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
+                    camera.rotation.set(targetRotation.x, targetRotation.y, targetRotation.z);
+                    controls.target.set(targetTarget.x, targetTarget.y, targetTarget.z);
+                    controls.update();
+                }
+            }
+            
+            animate();
+        }
+        
+        // Random camera transition - continuous, never stops
+        let currentViewIndex = 0;
+        function randomCameraTransition() {
+            // Pick a random view different from current
+            let nextIndex;
+            do {
+                nextIndex = Math.floor(Math.random() * cameraViews.length);
+            } while (nextIndex === currentViewIndex && cameraViews.length > 1);
+            
+            currentViewIndex = nextIndex;
+            const transitionDuration = 7000; // 7 seconds - much slower
+            transitionCameraTo(cameraViews[currentViewIndex], transitionDuration);
+            
+            // Start next transition before current one finishes (continuous)
+            // Start next transition at 80% of current transition (so they overlap smoothly)
+            setTimeout(() => {
+                randomCameraTransition();
+            }, transitionDuration * 0.8);
+        }
+        
+        // Piano creation functions (from main.js)
+        function createTextTexture(text, color = '#ffffff', fontSize = 100) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const canvasSize = Math.max(256, Math.ceil(fontSize * 2.5));
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = color;
+            context.font = `Bold ${fontSize}px Arial`;
+            context.textAlign = 'center';
+            
+            const lines = text.split(/<br>|\n/);
+            const lineHeight = fontSize * 1.2;
+            const totalHeight = lines.length * lineHeight;
+            const startY = (canvas.height - totalHeight) / 2 + fontSize * 0.8;
+            
+            lines.forEach((line, index) => {
+                context.textBaseline = 'top';
+                context.fillText(line, canvas.width / 2, startY + index * lineHeight);
+            });
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            if (fontSize >= 150) {
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                texture.generateMipmaps = false;
+            }
+            return texture;
+        }
+        
+        function createTextLabel(text, xPosition, keyHeight, keyDepth, color = '#ffffff', fontSize = 100, planeSize = 0.12) {
+            const texture = createTextTexture(text, color, fontSize);
+            const planeGeometry = new THREE.PlaneGeometry(planeSize, planeSize);
+            const planeMaterial = new THREE.MeshBasicMaterial({ 
+                map: texture,
+                transparent: true,
+                alphaTest: 0.1
+            });
+            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.position.set(xPosition, keyHeight + 0.001, keyDepth / 2 - 0.05);
+            plane.rotation.x = -Math.PI / 2;
+            return plane;
+        }
+        
+        function noteNameToMidiNote(noteName) {
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const match = noteName.match(/^([A-G]#?)(\d+)$/);
+            if (!match) return null;
+            const note = match[1];
+            const octave = parseInt(match[2]);
+            const noteIndex = noteNames.indexOf(note);
+            if (noteIndex === -1) return null;
+            return (octave + 1) * 12 + noteIndex;
+        }
+        
+        function getBlackKeyMidiNote(currentNote, nextNote) {
+            const currentMidi = noteNameToMidiNote(currentNote);
+            if (currentMidi === null) return null;
+            return currentMidi + 1;
+        }
+        
+        function shouldHaveBlackKey(note1, note2) {
+            const note1Letter = note1[0];
+            const note2Letter = note2[0];
+            const blackKeyPairs = [
+                ['C', 'D'], ['D', 'E'], ['F', 'G'], ['G', 'A'], ['A', 'B']
+            ];
+            return blackKeyPairs.some(pair => pair[0] === note1Letter && pair[1] === note2Letter);
+        }
+        
+        function getBlackKeyLabel(currentNote, nextNote) {
+            const note1Letter = currentNote[0];
+            const sharpMap = { 'C': 'C#', 'D': 'D#', 'F': 'F#', 'G': 'G#', 'A': 'A#' };
+            const flatMap = { 'D': 'D♭', 'E': 'E♭', 'G': 'G♭', 'A': 'A♭', 'B': 'B♭' };
+            const sharp = sharpMap[note1Letter];
+            const flat = flatMap[nextNote[0]];
+            return sharp + '<br>' + flat;
+        }
+        
+        // Create piano
+        const whiteKeyMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xd0d0d0,
+            metalness: 0.0,
+            roughness: 0.3,
+            clearcoat: 0.5,
+            clearcoatRoughness: 0.2,
+            reflectivity: 0.5
+        });
+        
+        const blackKeyMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x404040,
+            metalness: 0.0,
+            roughness: 0.4,
+            clearcoat: 0.3,
+            clearcoatRoughness: 0.3,
+            reflectivity: 0.3
+        });
+        
+        const keyLabels = [];
+        keyLabels.push('A0', 'B0');
+        for (let octave = 1; octave <= 7; octave++) {
+            keyLabels.push(`C${octave}`, `D${octave}`, `E${octave}`, `F${octave}`, `G${octave}`, `A${octave}`, `B${octave}`);
+        }
+        keyLabels.push('C8');
+        
+        const whiteKeyWidth = 0.15;
+        const whiteKeyHeight = 0.1;
+        const whiteKeyDepth = 0.8;
+        const whiteKeySpacing = 0.16;
+        const blackKeyWidth = 0.075;
+        const blackKeyHeight = 0.07;
+        const blackKeyDepth = 0.5;
+        const numWhiteKeys = keyLabels.length;
+        
+        const whiteKeyGeometry = new THREE.BoxGeometry(whiteKeyWidth, whiteKeyHeight, whiteKeyDepth);
+        const blackKeyGeometry = new THREE.BoxGeometry(blackKeyWidth, blackKeyHeight, blackKeyDepth);
+        const whiteKeyPositions = [];
+        
+        // Create white keys
+        for (let i = 0; i < numWhiteKeys; i++) {
+            const key = new THREE.Mesh(whiteKeyGeometry, whiteKeyMaterial.clone());
+            const xPosition = (i - numWhiteKeys / 2) * whiteKeySpacing + whiteKeySpacing / 2;
+            whiteKeyPositions.push(xPosition);
+            key.position.set(xPosition, whiteKeyHeight / 2, 0);
+            key.castShadow = true;
+            key.receiveShadow = true;
+            scene.add(key);
+            
+            const fullLabel = keyLabels[i];
+            const label = createTextLabel(fullLabel, xPosition, whiteKeyHeight, whiteKeyDepth, '#ffffff', 200, whiteKeyWidth);
+            label.position.z = whiteKeyDepth / 2 - 0.25;
+            scene.add(label);
+        }
+        
+        // Create black keys
+        for (let i = 0; i < numWhiteKeys - 1; i++) {
+            const currentNote = keyLabels[i];
+            const nextNote = keyLabels[i + 1];
+            
+            if (shouldHaveBlackKey(currentNote, nextNote)) {
+                const blackKey = new THREE.Mesh(blackKeyGeometry, blackKeyMaterial.clone());
+                const xPosition = (whiteKeyPositions[i] + whiteKeyPositions[i + 1]) / 2;
+                const whiteKeyBackEdge = -whiteKeyDepth / 2;
+                const blackKeyZ = whiteKeyBackEdge + blackKeyDepth / 2;
+                blackKey.position.set(xPosition, whiteKeyHeight + blackKeyHeight / 2, blackKeyZ);
+                blackKey.castShadow = true;
+                blackKey.receiveShadow = true;
+                scene.add(blackKey);
+                
+                const blackKeyLabel = getBlackKeyLabel(currentNote, nextNote);
+                const blackKeyFrontEdge = blackKeyZ + blackKeyDepth / 2;
+                const labelZ = blackKeyFrontEdge - 0.1;
+                const label = createTextLabel(blackKeyLabel, xPosition, whiteKeyHeight + blackKeyHeight, blackKeyDepth, '#888888', 65, 0.15);
+                label.position.z = labelZ;
+                scene.add(label);
+            }
+        }
+        
+        // Lighting - darker for launch page
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.35);
+        directionalLight.position.set(5, 8, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 20;
+        directionalLight.shadow.camera.left = -10;
+        directionalLight.shadow.camera.right = 10;
+        directionalLight.shadow.camera.top = 10;
+        directionalLight.shadow.camera.bottom = -10;
+        directionalLight.shadow.bias = -0.0001;
+        scene.add(directionalLight);
+        
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.1);
+        fillLight.position.set(-5, 3, -5);
+        scene.add(fillLight);
+        
+        const rimLight = new THREE.PointLight(0xffffff, 0.15, 15);
+        rimLight.position.set(0, 5, -8);
+        scene.add(rimLight);
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+        
+        // Start continuous camera transitions after a delay
+        setTimeout(() => {
+            randomCameraTransition();
+        }, 2000);
+        
+        // Screen effects system - random cycling overlays
+        const screenEffectsContainer = document.getElementById('screenEffects');
+        const effectTypes = [
+            'effect-vignette',
+            'effect-warm-tint',
+            'effect-cool-tint',
+            'effect-purple-tint',
+            'effect-green-tint',
+            'effect-grain',
+            'effect-scanlines',
+            'effect-light-leak',
+            'effect-chromatic',
+            'effect-glow',
+            'effect-color-shift',
+            'effect-pulse'
+        ];
+        
+        // Create all effect divs
+        effectTypes.forEach(effectType => {
+            const effectDiv = document.createElement('div');
+            effectDiv.className = `screen-effect ${effectType}`;
+            screenEffectsContainer.appendChild(effectDiv);
+        });
+        
+        const effectElements = screenEffectsContainer.querySelectorAll('.screen-effect');
+        let currentActiveIndex = -1;
+        
+        function activateRandomEffect() {
+            // Remove active class from current effect
+            if (currentActiveIndex >= 0) {
+                effectElements[currentActiveIndex].classList.remove('active');
+            }
+            
+            // Pick a random effect (different from current)
+            let nextIndex;
+            do {
+                nextIndex = Math.floor(Math.random() * effectElements.length);
+            } while (nextIndex === currentActiveIndex && effectElements.length > 1);
+            
+            currentActiveIndex = nextIndex;
+            effectElements[currentActiveIndex].classList.add('active');
+            
+            // Schedule next effect change (random duration between 3-8 seconds)
+            const nextDuration = 3000 + Math.random() * 5000;
+            setTimeout(activateRandomEffect, nextDuration);
+        }
+        
+        // Start the effect cycle after a short delay
+        setTimeout(() => {
+            activateRandomEffect();
+        }, 1000);
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
