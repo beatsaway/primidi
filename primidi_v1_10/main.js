@@ -9,7 +9,7 @@ if (typeof window !== 'undefined') {
 
 // Create scene
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x001007); // Dark teal-green background
+scene.background = null; // Transparent so body's teal gradient shows through
 
 // Create camera - top view to see all keys clearly
 const camera = new THREE.PerspectiveCamera(
@@ -18,9 +18,8 @@ const camera = new THREE.PerspectiveCamera(
     0.1,
     1000
 );
-// Set camera to default position and rotation (no transition)
-camera.position.set(0.995, 1.338, 1.232);
-camera.rotation.set(-0.826, 0.501, 0.480);
+// Initial position/target are applied from view 11 in index.html (single source of truth). Placeholder until then.
+camera.position.set(0, 0, 3);
 camera.fov = 50;
 camera.updateProjectionMatrix();
 
@@ -52,13 +51,13 @@ document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.target.set(0.000, 0.000, 0.000);
+controls.target.set(0, 0, 0);
 controls.update();
 
 
-// White key material - improved for realistic piano keys
+// White key material - ivory/white for light mode
 const whiteKeyMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xd0d0d0, // Darker grey-white for better highlight contrast
+    color: 0xeeefee, // Whiter ivory tone
     metalness: 0.0, // Piano keys are not metallic
     roughness: 0.3, // Smooth, polished surface
     clearcoat: 0.5, // Subtle glossy finish
@@ -184,6 +183,9 @@ function noteNameToMidiNote(noteName) {
     const noteIndex = noteNames.indexOf(note);
     if (noteIndex === -1) return null;
     return (octave + 1) * 12 + noteIndex;
+}
+if (typeof window !== 'undefined') {
+    window.noteNameToMidiNote = noteNameToMidiNote;
 }
 
 // Function to check if a note is a black key (sharp/flat)
@@ -315,9 +317,9 @@ for (let i = 0; i < numWhiteKeys; i++) {
     // Original: 80px font on 0.12 plane = 666.67px per unit
     // New: 200px font on 0.15 plane = 1333.33px per unit (2x larger)
     const label = createTextLabel(fullLabel, xPosition, whiteKeyHeight, whiteKeyDepth, '#ffffff', 200, whiteKeyWidth);
-    // Move label further up (back) on the key surface to be closer to black key labels
-    label.position.z = whiteKeyDepth / 2 - 0.25; // Moved further back/up to be closer to black key labels
-    scene.add(label);
+    // Attach label to key so it moves with key press animation (local position on top of key)
+    label.position.set(0, whiteKeyHeight / 2 + 0.001, whiteKeyDepth / 2 - 0.25);
+    key.add(label);
     
     // Store key reference in keyMap
     const midiNote = noteNameToMidiNote(fullLabel);
@@ -418,6 +420,42 @@ function getBlackKeyLabel(currentNote, nextNote, mode) {
     }
 }
 
+// For additional div labels: get one-line black key text (e.g. "C#/D♭", "C#", "D♭"). Returns null for white keys.
+window.getBlackKeyDivLabelText = function(midiNote) {
+    const keyData = keyMap.get(midiNote);
+    if (!keyData || !keyData.isBlack) return null;
+    const allLabels = window.getAllKeyLabels && window.getAllKeyLabels();
+    if (!allLabels) return null;
+    const mesh = allLabels.get(midiNote);
+    if (!mesh || !mesh.userData.currentNote) return null;
+    const mode = (window.keyLabelSettings && window.keyLabelSettings.blackKeyLabelMode) || 'both';
+    const html = getBlackKeyLabel(mesh.userData.currentNote, mesh.userData.nextNote, mode);
+    return html.replace('<br>', '/');
+};
+
+// Get the label text to show on a key (sticker or tag) based on Format: withOctave (A3, C1) or noteOnly (A, B, C).
+window.getKeyLabelDisplayText = function(midiNote) {
+    const keyData = keyMap.get(midiNote);
+    const format = (window.keyLabelSettings && window.keyLabelSettings.labelFormat) || 'withOctave';
+    const withOctave = (format === 'withOctave');
+    const fullName = midiNoteToNoteName(midiNote);
+    if (!keyData || !keyData.isBlack) {
+        return withOctave ? fullName : fullName.replace(/\d+$/, '');
+    }
+    const allLabels = window.getAllKeyLabels && window.getAllKeyLabels();
+    if (!allLabels) return fullName;
+    const mesh = allLabels.get(midiNote);
+    if (!mesh || !mesh.userData.currentNote) return fullName;
+    const mode = (window.keyLabelSettings && window.keyLabelSettings.blackKeyLabelMode) || 'both';
+    let text = getBlackKeyLabel(mesh.userData.currentNote, mesh.userData.nextNote, mode);
+    text = text.replace('<br>', '/');
+    if (withOctave) {
+        const octave = Math.floor(midiNote / 12) - 1;
+        text = text + octave;
+    }
+    return text;
+};
+
 // Add black keys between appropriate white keys
 for (let i = 0; i < numWhiteKeys - 1; i++) {
     const currentNote = keyLabels[i];
@@ -446,11 +484,10 @@ for (let i = 0; i < numWhiteKeys - 1; i++) {
         const labelMode = (window.keyLabelSettings && window.keyLabelSettings.blackKeyLabelMode) || 'both';
         const blackKeyLabel = getBlackKeyLabel(currentNote, nextNote, labelMode);
         const blackKeyFrontEdge = blackKeyZ + blackKeyDepth / 2; // Front edge of black key
-        const labelZ = blackKeyFrontEdge - 0.1; // Moved up a bit (further back from front edge)
         const label = createTextLabel(blackKeyLabel, xPosition, whiteKeyHeight + blackKeyHeight, blackKeyDepth, '#888888', 65, 0.15);
-        // Override the z position to be relative to the black key
-        label.position.z = labelZ;
-        scene.add(label);
+        // Attach label to black key so it moves with key press animation (local position on top of key)
+        label.position.set(0, blackKeyHeight / 2 + 0.001, blackKeyDepth / 2 - 0.1);
+        blackKey.add(label);
         
         // Store black key reference in keyMap
         const midiNote = getBlackKeyMidiNote(currentNote, nextNote);
@@ -499,6 +536,11 @@ for (let i = 0; i < numWhiteKeys - 1; i++) {
             }
         }
     }
+}
+
+// Apply default label format (e.g. note only) to all key textures after keys are created
+if (window.updateAllLabelFormats) {
+    window.updateAllLabelFormats();
 }
 
 // Function to update all black key labels based on mode
@@ -595,10 +637,40 @@ const unisonVoices = new Map(); // midiNote -> [noteName]
 // Animation loop
 // Optimize: Track frame count to update filter less frequently (every 3 frames = ~20fps instead of 60fps)
 let filterUpdateFrameCounter = 0;
+let lastAnimateTime = performance.now();
 function animate() {
     requestAnimationFrame(animate);
+    const now = performance.now();
+    const deltaSec = (now - lastAnimateTime) / 1000;
+    lastAnimateTime = now;
+
+    // Idle orbit: slow rotation around current target (works from any view when toggled ON)
+    if (window.cameraIdleOrbit && window.cameraIdleOrbit.active && window.camera && window.controls) {
+        const o = window.cameraIdleOrbit;
+        if (o.lastAutoViewCheck == null) o.lastAutoViewCheck = now;
+        if (now - o.lastAutoViewCheck >= 3000) {
+            o.lastAutoViewCheck = now;
+            if (Math.random() < 0.33 && window.cycleToNextCameraView) window.cycleToNextCameraView();
+        }
+        const tx = o.targetX != null ? o.targetX : 0;
+        const ty = o.targetY != null ? o.targetY : 0;
+        const tz = o.targetZ != null ? o.targetZ : 0;
+        const rad = o.radius != null ? o.radius : 2.4;
+        o.angle = (o.angle || 0) + (o.speed || 0.08) * deltaSec;
+        camera.position.x = tx + rad * Math.sin(o.angle);
+        camera.position.z = tz + rad * Math.cos(o.angle);
+        camera.position.y = o.height !== undefined ? o.height : 1.06;
+        controls.target.set(tx, ty, tz);
+    }
+
     controls.update();
-    
+
+    if (window.shouldShowDivLabels && window.shouldShowDivLabels()) {
+        if (window.ensureDivLabelsContainerAndShow) window.ensureDivLabelsContainerAndShow();
+        scene.updateMatrixWorld(true);
+        if (window.updateDivLabelsPosition) window.updateDivLabelsPosition(camera);
+    }
+
     // Update key animations (for animated movement style)
     if (window.updateKeyAnimations) {
         const currentTime = performance.now() / 1000; // Convert to seconds
@@ -870,9 +942,9 @@ if (typeof window !== 'undefined' && window.VelocityTimbreManager && synth && sy
     }
 }
 
-// Set master volume when GSL synth has created its context
-if (synth && synth.synth && synth.synth.masterGain) {
-    synth.synth.masterGain.gain.value = 0.7;
+// Set master volume when GSL synth has created its context (default 1000%, range 0–2000%)
+if (synth && synth.setMasterVolume) {
+    synth.setMasterVolume(1000);
 }
 
 // ========== MIDI Mapping Module ==========
@@ -1537,7 +1609,21 @@ document.addEventListener('click', () => {
     if (window.populateGslPresetDropdown) {
         window.populateGslPresetDropdown();
     }
+    if (window.cameraIdleOrbit) window.cameraIdleOrbit.active = false;
+    if (window.applyCameraView) {
+        window.currentCameraViewIndex = 5;
+        window.applyCameraView(5);
+    }
 }, { once: true });
+
+// Spacebar: cycle to next camera view
+window.addEventListener('keydown', (event) => {
+    if (event.code === 'Space' || event.key === ' ') {
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable)) return;
+        event.preventDefault();
+        if (window.cycleToNextCameraView) window.cycleToNextCameraView();
+    }
+});
 
 // Also try to initialize MIDI and keypress input immediately (may require user interaction for audio)
 // Note: Synth will be initialized on first user click
@@ -1545,10 +1631,43 @@ console.log('Click anywhere to enable MIDI and audio');
 
 // Keyboard shortcut to release all stuck notes (press 'R' key)
 window.addEventListener('keydown', (event) => {
-    // Press 'R' to release all notes (useful if notes get stuck)
     if (event.key === 'r' || event.key === 'R') {
-        releaseAllNotes();
-        console.log('Released all notes (keyboard shortcut)');
+        if (event.shiftKey) {
+            releaseAllNotes();
+            console.log('Released all notes (Shift+R)');
+        } else {
+            if (window.cameraIdleOrbit && window.camera && window.controls) {
+                const o = window.cameraIdleOrbit;
+                o.active = !o.active;
+                if (o.active) {
+                    var t = window.controls.target;
+                    var p = window.camera.position;
+                    o.targetX = t.x;
+                    o.targetY = t.y;
+                    o.targetZ = t.z;
+                    var dx = p.x - t.x, dz = p.z - t.z;
+                    o.radius = Math.sqrt(dx * dx + dz * dz) || 2.4;
+                    o.height = p.y;
+                    o.angle = Math.atan2(dx, dz);
+                    o.lastAutoViewCheck = performance.now();
+                }
+                console.log('Camera rotate at piano: ' + (o.active ? 'ON' : 'OFF'));
+            }
+        }
+        return;
+    }
+    // Press 'C' to capture current camera (position + target) for pasting into a view
+    if (event.key === 'c' || event.key === 'C') {
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable)) return;
+        if (!window.camera || !window.controls) return;
+        const p = window.camera.position;
+        const t = window.controls.target;
+        const fmt = (v) => Math.round(v * 1000) / 1000;
+        const snippet = `position: { x: ${fmt(p.x)}, y: ${fmt(p.y)}, z: ${fmt(p.z)} },\ntarget: { x: ${fmt(t.x)}, y: ${fmt(t.y)}, z: ${fmt(t.z)} }`;
+        console.log('Camera (paste into a view):\n' + snippet);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(snippet).then(() => console.log('(copied to clipboard)')).catch(() => {});
+        }
     }
 });
 
@@ -2013,7 +2132,8 @@ function resetAllSettingsToDefaults() {
 }
 
 /**
- * Populate preset dropdown from GSL manifest and set current preset.
+ * Populate preset dropdown from GSL manifest (preset names only; "Loading…" = this manifest fetch).
+ * Does NOT load every preset's samples—only the chosen preset is preloaded after user starts audio.
  */
 function populateGslPresetDropdown() {
     const handler = window.InstrumentSampleHandler;
@@ -2025,18 +2145,34 @@ function populateGslPresetDropdown() {
         list.forEach(function (entry) {
             const opt = document.createElement('option');
             opt.value = entry.slug;
-            opt.textContent = entry.id;
+            // Use optional label, else show name without leading "xxx_xxx_" (e.g. "000_055_Orchestra Hit" → "Orchestra Hit")
+            const displayName = (entry.label && typeof entry.label === 'string')
+                ? entry.label
+                : (entry.id && typeof entry.id === 'string')
+                    ? entry.id.replace(/^\d+_\d+_\s*/, '')
+                    : entry.id;
+            opt.textContent = displayName || entry.slug;
             sel.appendChild(opt);
         });
-        const firstSlug = list[0].slug;
-        window.currentGslPreset = firstSlug;
-        sel.value = firstSlug;
-        // Preload first preset when we have an audio context
-        if (window.synth && window.synth.synth && window.synth.synth.audioCtx) {
-            const baseUrl = (document.baseURI || window.location.href || '').replace(/\/[^/]*$/, '/');
-            handler.ensurePresetLoaded(window.synth.synth.audioCtx, firstSlug, baseUrl).catch(function () {});
-        }
+        const defaultSlug = list.some(function (e) { return e.slug === 'gsl_piano'; }) ? 'gsl_piano' : list[0].slug;
+        window.currentGslPreset = defaultSlug;
+        sel.value = defaultSlug;
+        startBackgroundPreloadCurrentPreset();
     }).catch(function () {});
+}
+
+/**
+ * Preload the currently chosen preset's note samples in the background (non-blocking).
+ * Call after user has started the audio context (e.g. first click). Good strategy: fewer missed notes.
+ */
+function startBackgroundPreloadCurrentPreset() {
+    const preset = window.currentGslPreset;
+    if (!preset) return;
+    const handler = window.InstrumentSampleHandler;
+    const ctx = window.synth && window.synth.synth && window.synth.synth.audioCtx;
+    if (!handler || !ctx) return;
+    const baseUrl = (document.baseURI || window.location.href || '').replace(/\/[^/]*$/, '/');
+    handler.ensurePresetLoaded(ctx, preset, baseUrl).catch(function (e) { console.warn('Preset preload:', e); });
 }
 
 /**
@@ -2048,11 +2184,7 @@ function applySoundPreset(presetName) {
     const isGsl = handler && handler.isGslPreset && handler.isGslPreset(presetName);
     if (isGsl) {
         window.currentGslPreset = presetName;
-        const ctx = synth && synth.synth && synth.synth.audioCtx;
-        if (ctx) {
-            const baseUrl = (document.baseURI || window.location.href || '').replace(/\/[^/]*$/, '/');
-            handler.ensurePresetLoaded(ctx, presetName, baseUrl).catch(function (e) { console.warn('Preset load:', e); });
-        }
+        startBackgroundPreloadCurrentPreset();
         const presetSelect = document.getElementById('preset-select');
         if (presetSelect) presetSelect.value = presetName;
     }

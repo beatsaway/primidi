@@ -27,7 +27,7 @@
   function ensureGslManifest() {
     if (gslManifest) return Promise.resolve();
     var base = (typeof document !== 'undefined' && document.baseURI) ? document.baseURI.replace(/\/[^/]*$/, '/') : '';
-    var url = base + GSL_MANIFEST_URL;
+    var url = base + GSL_MANIFEST_URL + '?v=2';
     return fetch(url).then(function (r) {
       if (!r.ok) throw new Error('GSL manifest: ' + r.status);
       return r.json();
@@ -100,8 +100,11 @@
     var basePath = preset.basePath;
     var zones = preset.zones;
     var base = (baseUrl || '').replace(/\/[^/]*$/, '/');
+    var pathPrefix = basePath.replace(/\/$/, '').split('/').pop();
     return Promise.all(zones.map(function (z) {
-      var url = base + basePath + (z.file || '');
+      var filePath = z.file || '';
+      if (pathPrefix && filePath.indexOf(pathPrefix + '/') === 0) filePath = filePath.slice((pathPrefix + '/').length);
+      var url = base + basePath + filePath;
       return fetch(url)
         .then(function (r) {
           if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + url);

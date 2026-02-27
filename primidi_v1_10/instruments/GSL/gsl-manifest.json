@@ -904,5 +904,10 @@
     {
         "id": "128_056_SFX",
         "slug": "gsl_128_056_SFX"
+    },
+    {
+        "id": "0000_Chaos_sf2_file_wavs",
+        "slug": "gsl_piano",
+        "label": "Piano"
     }
 ]

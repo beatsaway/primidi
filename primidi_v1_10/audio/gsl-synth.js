@@ -1,15 +1,42 @@
 /**
  * GSL Sample Synth for PriMIDI 3D piano.
  * Plays GSL instrument samples from MIDI note on/off with velocity and sustain pedal.
- * Compatible with midi-mapping.js (triggerAttack, triggerRelease, releaseAllVoices).
+ * Reverb (send + convolver) and stereo width (mid/side). Compatible with midi-mapping.js.
  */
 (function () {
   'use strict';
 
   var audioCtx = null;
   var masterGain = null;
+  var dryGain = null;
+  var reverbSend = null;
+  var reverbNode = null;
+  var reverbWet = null;
+  var widthSplit = null;
+  var midSum = null;
+  var sideSum = null;
+  var midGain = null;
+  var sideGain = null;
+  var sideGainInv = null;
+  var widthMerge = null;
+  var invGain = null;
+  var sumGain = null;
+  var lastMasterVolumePercent = 1000; // 0–2000, default 1000%
   var activeVoices = {}; // noteName -> [{ gain, bufferSource, release }]
   var SAMPLE_ENVELOPE = { attack: 0.02, decay: 0.15, sustain: 0.6, release: 0.3 };
+
+  function createImpulseResponse(ctx, seconds, decay) {
+    var length = Math.floor(ctx.sampleRate * seconds);
+    var impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+    for (var ch = 0; ch < impulse.numberOfChannels; ch += 1) {
+      var data = impulse.getChannelData(ch);
+      for (var i = 0; i < length; i += 1) {
+        var t = i / length;
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, decay);
+      }
+    }
+    return impulse;
+  }
 
   function noteNameToMidi(noteName) {
     if (typeof window !== 'undefined' && window.noteNameToMidiNote) {
@@ -28,8 +55,52 @@
     if (audioCtx) return audioCtx;
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.7;
+    masterGain.gain.setValueAtTime(lastMasterVolumePercent / 100, audioCtx.currentTime);
+
+    dryGain = audioCtx.createGain();
+    dryGain.gain.setValueAtTime(1, audioCtx.currentTime);
+    reverbSend = audioCtx.createGain();
+    reverbSend.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    reverbNode = audioCtx.createConvolver();
+    reverbNode.buffer = createImpulseResponse(audioCtx, 2.2, 2.4);
+    reverbWet = audioCtx.createGain();
+    reverbWet.gain.setValueAtTime(0.3, audioCtx.currentTime);
+
+    sumGain = audioCtx.createGain();
+    sumGain.gain.setValueAtTime(1, audioCtx.currentTime);
+    dryGain.connect(sumGain);
+    reverbSend.connect(reverbNode);
+    reverbNode.connect(reverbWet);
+    reverbWet.connect(sumGain);
+
+    widthSplit = audioCtx.createChannelSplitter(2);
+    sumGain.connect(widthSplit);
+    midSum = audioCtx.createGain();
+    sideSum = audioCtx.createGain();
+    midGain = audioCtx.createGain();
+    sideGain = audioCtx.createGain();
+    sideGainInv = audioCtx.createGain();
+    invGain = audioCtx.createGain();
+    invGain.gain.setValueAtTime(-1, audioCtx.currentTime);
+    sideGainInv.gain.setValueAtTime(-1, audioCtx.currentTime);
+    widthMerge = audioCtx.createChannelMerger(2);
+
+    widthSplit.connect(midSum, 0);
+    widthSplit.connect(midSum, 1);
+    widthSplit.connect(sideSum, 0);
+    widthSplit.connect(invGain, 1);
+    invGain.connect(sideSum);
+    midSum.connect(midGain);
+    sideSum.connect(sideGain);
+    sideGain.connect(sideGainInv);
+    midGain.connect(widthMerge, 0, 0);
+    sideGain.connect(widthMerge, 0, 0);
+    midGain.connect(widthMerge, 0, 1);
+    sideGainInv.connect(widthMerge, 0, 1);
+    widthMerge.connect(masterGain);
     masterGain.connect(audioCtx.destination);
+
+    setStereoWidth(-75);
     return audioCtx;
   }
 
@@ -63,7 +134,8 @@
 
     var gain = ctx.createGain();
     gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.connect(masterGain);
+    gain.connect(dryGain);
+    gain.connect(reverbSend);
 
     var peak = velocityNorm;
     var sustainLevel = velocityNorm * sustain;
@@ -134,11 +206,43 @@
   function updateNoteKeyState() {}
   function setSustainPedal() {}
 
+  function setReverb(value) {
+    var v = Math.max(0, Math.min(1, value));
+    var amount = v * 0.6;
+    if (!audioCtx) ensureContext();
+    if (reverbSend) reverbSend.gain.setTargetAtTime(amount, audioCtx.currentTime, 0.01);
+    if (reverbWet) reverbWet.gain.setTargetAtTime(amount, audioCtx.currentTime, 0.01);
+  }
+
+  function setStereoWidth(midEq) {
+    var clamped = Math.max(-100, Math.min(0, midEq));
+    var db = -36 + ((clamped + 100) / 100) * 24;
+    var midAmount = Math.pow(10, db / 20);
+    if (!audioCtx) ensureContext();
+    if (midGain) midGain.gain.setTargetAtTime(midAmount, audioCtx.currentTime, 0.03);
+    if (sideGain) sideGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.03);
+  }
+
+  function setMasterVolume(percent) {
+    var p = Math.max(0, Math.min(2000, percent));
+    lastMasterVolumePercent = p;
+    if (!audioCtx) ensureContext();
+    if (masterGain) masterGain.gain.setTargetAtTime(p / 100, audioCtx.currentTime, 0.01);
+  }
+
+  function getMasterVolume() {
+    return lastMasterVolumePercent;
+  }
+
   var synth = {
     triggerAttack: triggerAttack,
     triggerRelease: triggerRelease,
     releaseAllVoices: releaseAllVoices,
     setNoteEnvelope: setNoteEnvelope,
+    setReverb: setReverb,
+    setStereoWidth: setStereoWidth,
+    setMasterVolume: setMasterVolume,
+    getMasterVolume: getMasterVolume,
     synth: {
       audioCtx: null,
       masterGain: null,

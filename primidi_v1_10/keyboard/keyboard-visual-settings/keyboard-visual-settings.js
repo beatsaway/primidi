@@ -42,81 +42,117 @@
         panel.className = 'keyboard-visual-panel';
         
         panel.innerHTML = `
-            <button class="keyboard-visual-close" id="keyboard-visual-close">×</button>
-            <h2>🎹 Keyboard Visual Settings</h2>
-            
-            <div class="keyboard-visual-setting-item">
-                <label>
-                    <input type="checkbox" id="enable-key-highlight">
-                    <div>
-                        <strong>Highlight on Press</strong>
-                        <div class="setting-description">
-                            Highlight keys when pressed for visual feedback.
-                        </div>
-                    </div>
-                </label>
+            <div class="settings-tabs" role="tablist">
+                <button type="button" class="settings-tab active" role="tab" id="settings-tab-keyboard" aria-selected="true" data-panel="settings-panel-keyboard">Keyboard</button>
+                <button type="button" class="settings-tab" role="tab" id="settings-tab-sound" aria-selected="false" data-panel="settings-panel-sound">Sound</button>
+                <button type="button" class="settings-tab" role="tab" id="settings-tab-camera" aria-selected="false" data-panel="settings-panel-camera">Camera</button>
+                <button type="button" class="settings-tab" role="tab" id="settings-tab-about" aria-selected="false" data-panel="settings-panel-about">About</button>
             </div>
-            
-            <div class="keyboard-visual-setting-item">
-                <label>
-                    <input type="checkbox" id="enable-key-movement" checked>
-                    <div>
-                        <strong>Key Up/Down Movement</strong>
-                        <button class="keyboard-visual-settings-btn" id="key-movement-settings-btn">[...]</button>
-                        <div class="setting-description">
-                            Move keys down when pressed, up when released.
+            <div id="settings-panel-keyboard" class="settings-panel active" role="tabpanel">
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-key-highlight">
+                        <div>
+                            <strong>Highlight on Press</strong>
+                            <div class="setting-description">Key glow on press.</div>
                         </div>
-                    </div>
-                </label>
+                    </label>
+                </div>
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-key-movement" checked>
+                        <div>
+                            <strong>Key Up/Down Movement</strong>
+                            <button type="button" class="keyboard-visual-settings-menu" id="key-movement-settings-btn" aria-label="More settings">>></button>
+                            <div class="setting-description">Keys move down/up with press/release.</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-key-labels" checked>
+                        <div>
+                            <strong>Key Labels</strong>
+                            <button type="button" class="keyboard-visual-settings-menu" id="key-labels-settings-btn" aria-label="More settings">>></button>
+                            <div class="setting-description">Note names on keys (e.g. C4, A0).</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-midi-input" checked>
+                        <div>
+                            <strong>MIDI Input</strong>
+                            <div class="setting-description">Use MIDI controller to play.</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-keypress-input" checked>
+                        <div>
+                            <strong>Keyboard Input</strong>
+                            <div class="setting-description">Computer keys: a–k = C3–D4; &lt; &gt; = octave.</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <input type="checkbox" id="enable-midi-debug">
+                        <div>
+                            <strong>MIDI Debug</strong>
+                            <div class="setting-description">Show note/velocity on press.</div>
+                        </div>
+                    </label>
+                </div>
             </div>
-            
-            <div class="keyboard-visual-setting-item">
-                <label>
-                    <input type="checkbox" id="enable-key-labels">
-                    <div>
-                        <strong>Key Labels</strong>
-                        <button class="keyboard-visual-settings-btn" id="key-labels-settings-btn">[...]</button>
-                        <div class="setting-description">
-                            Show note names on keys (A0, C4, etc.).
-                        </div>
-                    </div>
-                </label>
+            <div id="settings-panel-sound" class="settings-panel" role="tabpanel">
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <span class="setting-label-inline">Reverb</span>
+                        <select id="settings-reverb-select">
+                            <option value="0">none</option>
+                            <option value="25">subtle</option>
+                            <option value="50" selected>less</option>
+                            <option value="75">more</option>
+                            <option value="100">full on</option>
+                        </select>
+                    </label>
+                    <div class="setting-description">Room ambience amount.</div>
+                </div>
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <span class="setting-label-inline">Stereo</span>
+                        <select id="settings-stereo-select">
+                            <option value="-100">full on</option>
+                            <option value="-75" selected>more</option>
+                            <option value="-50">less</option>
+                            <option value="-25">subtle</option>
+                            <option value="0">weak</option>
+                        </select>
+                    </label>
+                    <div class="setting-description">Stereo width (wider = more spread).</div>
+                </div>
+                <div class="keyboard-visual-setting-item">
+                    <label>
+                        <span class="setting-label-inline">Master</span>
+                        <input type="range" id="settings-master-volume" min="0" max="2000" value="1000" step="10">
+                        <span class="settings-master-volume-value" id="settings-master-volume-value">1000%</span>
+                    </label>
+                    <div class="setting-description">Final output gain (0–2000%).</div>
+                </div>
             </div>
-            
-            <div class="keyboard-visual-setting-item">
-                <label>
-                    <input type="checkbox" id="enable-midi-input" checked>
-                    <div>
-                        <strong>MIDI Input</strong>
-                        <div class="setting-description">
-                            Enable/disable MIDI controller input. When disabled, MIDI controllers won't trigger notes.
-                        </div>
-                    </div>
-                </label>
+            <div id="settings-panel-camera" class="settings-panel" role="tabpanel">
+                <div class="settings-about-content">
+                    <p><strong>Spacebar</strong> — cycle to next camera view.</p>
+                    <p><strong>R</strong> — toggle camera rotate (orbit) on/off.</p>
+                </div>
             </div>
-            
-            <div class="keyboard-visual-setting-item">
-                <label>
-                    <input type="checkbox" id="enable-keypress-input" checked>
-                    <div>
-                        <strong>Keyboard Input</strong>
-                        <div class="setting-description">
-                            Play piano with computer keyboard: a,w,s,e,d,f,t,g,y,h,u,j,k,o,l (C3-D4). Use &lt; and &gt; to shift octave (A0-C8 range).
-                        </div>
-                    </div>
-                </label>
-            </div>
-            
-            <div class="keyboard-visual-setting-item">
-                <label>
-                    <input type="checkbox" id="enable-midi-debug">
-                    <div>
-                        <strong>MIDI Debug Display</strong>
-                        <div class="setting-description">
-                            Show real-time MIDI note number and velocity values when keys are pressed. Useful for debugging MIDI input.
-                        </div>
-                    </div>
-                </label>
+            <div id="settings-panel-about" class="settings-panel" role="tabpanel">
+                <div class="settings-about-content">
+                    <p><strong>Pri<span style="font-variant: small-caps">midi</span></strong></p>
+                    <p>Developed by <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Beats Away</a> in 2026. If you enjoy using this premium midi synth for free, <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">buy me a coffee ☕</a>.</p>
+                </div>
             </div>
         `;
         
@@ -131,17 +167,56 @@
      * Setup event listeners
      */
     function setupEventListeners() {
-        // Close button
-        const closeBtn = document.getElementById('keyboard-visual-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                if (settingsModal) {
-                    settingsModal.style.display = 'none';
-                    settingsModal.classList.remove('active');
+        // Tabs: Keyboard / Sound / Camera / About
+        const tabKeyboard = document.getElementById('settings-tab-keyboard');
+        const tabSound = document.getElementById('settings-tab-sound');
+        const tabCamera = document.getElementById('settings-tab-camera');
+        const tabAbout = document.getElementById('settings-tab-about');
+        const panelKeyboard = document.getElementById('settings-panel-keyboard');
+        const panelSound = document.getElementById('settings-panel-sound');
+        const panelCamera = document.getElementById('settings-panel-camera');
+        const panelAbout = document.getElementById('settings-panel-about');
+        function showPanel(panelId) {
+            [tabKeyboard, tabSound, tabCamera, tabAbout].forEach(function (t) {
+                if (t) {
+                    t.classList.toggle('active', t.getAttribute('data-panel') === panelId);
+                    t.setAttribute('aria-selected', t.getAttribute('data-panel') === panelId ? 'true' : 'false');
+                }
+            });
+            [panelKeyboard, panelSound, panelCamera, panelAbout].forEach(function (p) {
+                if (p) {
+                    p.classList.toggle('active', p.id === panelId);
                 }
             });
         }
-        
+        if (tabKeyboard) tabKeyboard.addEventListener('click', function () { showPanel('settings-panel-keyboard'); });
+        if (tabSound) tabSound.addEventListener('click', function () { showPanel('settings-panel-sound'); });
+        if (tabCamera) tabCamera.addEventListener('click', function () { showPanel('settings-panel-camera'); });
+        if (tabAbout) tabAbout.addEventListener('click', function () { showPanel('settings-panel-about'); });
+
+        // Sound tab: Reverb & Stereo → gsl-synth
+        const reverbSelect = document.getElementById('settings-reverb-select');
+        const stereoSelect = document.getElementById('settings-stereo-select');
+        if (reverbSelect && window.synth && window.synth.setReverb) {
+            reverbSelect.addEventListener('change', function () {
+                window.synth.setReverb(parseInt(this.value, 10) / 100);
+            });
+        }
+        if (stereoSelect && window.synth && window.synth.setStereoWidth) {
+            stereoSelect.addEventListener('change', function () {
+                window.synth.setStereoWidth(parseInt(this.value, 10));
+            });
+        }
+        var masterVolumeSlider = document.getElementById('settings-master-volume');
+        var masterVolumeValue = document.getElementById('settings-master-volume-value');
+        if (masterVolumeSlider && masterVolumeValue && window.synth && window.synth.setMasterVolume) {
+            masterVolumeSlider.addEventListener('input', function () {
+                var p = parseInt(this.value, 10);
+                masterVolumeValue.textContent = p + '%';
+                window.synth.setMasterVolume(p);
+            });
+        }
+
         // Close on modal background click
         if (settingsModal) {
             settingsModal.addEventListener('click', (e) => {
@@ -234,9 +309,8 @@
             midiDebugCheckbox.addEventListener('change', (e) => {
                 window.midiDebugSettings = window.midiDebugSettings || {};
                 window.midiDebugSettings.enabled = e.target.checked;
-                if (!e.target.checked) {
-                    // Clear debug display when disabled
-                    clearMidiDebugDisplay();
+                if (!e.target.checked && window.clearMidiDebugDisplay) {
+                    window.clearMidiDebugDisplay();
                 }
                 updateUI();
             });
@@ -297,177 +371,6 @@
                 </div>
             </div>
         `;
-        
-        // Add styles
-        if (!document.getElementById('key-movement-styles')) {
-            const style = document.createElement('style');
-            style.id = 'key-movement-styles';
-            style.textContent = `
-                .key-movement-popup {
-                    display: none;
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
-                    backdrop-filter: blur(5px);
-                    z-index: 3001;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .key-movement-popup.active {
-                    display: flex;
-                }
-                .key-movement-popup-content {
-                    background: rgba(30, 30, 45, 0.95);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 12px;
-                    padding: 24px;
-                    max-width: 600px;
-                    width: 90%;
-                    max-height: 85vh;
-                    overflow-y: auto;
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-                    position: relative;
-                }
-                .key-movement-popup-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 20px;
-                }
-                .key-movement-popup-header h2 {
-                    margin: 0;
-                    font-family: 'Inter', sans-serif;
-                    font-weight: 600;
-                    font-size: 18px;
-                    color: #fff;
-                }
-                .key-movement-popup-close {
-                    background: none;
-                    border: none;
-                    color: #fff;
-                    font-size: 28px;
-                    cursor: pointer;
-                    padding: 0;
-                    width: 32px;
-                    height: 32px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 4px;
-                    transition: background 0.2s;
-                }
-                .key-movement-popup-close:hover {
-                    background: rgba(255, 255, 255, 0.1);
-                }
-                .key-movement-popup-body {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 20px;
-                }
-                .key-movement-setting {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 6px;
-                }
-                .key-movement-setting label {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    color: #fff;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 13px;
-                }
-                .key-movement-setting label span:first-child {
-                    min-width: 140px;
-                    font-weight: 500;
-                }
-                .key-movement-setting select {
-                    flex: 1;
-                    padding: 6px 12px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 6px;
-                    color: #fff;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 13px;
-                    cursor: pointer;
-                }
-                .key-movement-setting select option {
-                    background: rgba(40, 40, 55, 0.98);
-                    color: #fff;
-                    padding: 8px 12px;
-                }
-                .key-movement-setting select:focus {
-                    outline: none;
-                    border-color: #1a5a3a;
-                    background: rgba(255, 255, 255, 0.15);
-                }
-                .key-movement-setting input[type="range"] {
-                    flex: 1;
-                    height: 6px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 3px;
-                    outline: none;
-                    -webkit-appearance: none;
-                }
-                .key-movement-setting input[type="range"]::-webkit-slider-thumb {
-                    -webkit-appearance: none;
-                    appearance: none;
-                    width: 16px;
-                    height: 16px;
-                    background: #1a5a3a;
-                    border-radius: 50%;
-                    cursor: pointer;
-                }
-                .key-movement-setting input[type="range"]::-moz-range-thumb {
-                    width: 16px;
-                    height: 16px;
-                    background: #1a5a3a;
-                    border-radius: 50%;
-                    cursor: pointer;
-                    border: none;
-                }
-                .key-movement-value {
-                    min-width: 60px;
-                    text-align: right;
-                    color: #1a5a3a;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 12px;
-                    font-weight: 500;
-                }
-                .key-movement-description {
-                    font-size: 11px;
-                    color: rgba(255, 255, 255, 0.6);
-                    font-family: 'Inter', sans-serif;
-                    margin-left: 152px;
-                    line-height: 1.4;
-                }
-                .key-movement-popup-footer {
-                    margin-top: 10px;
-                    padding-top: 20px;
-                    border-top: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                .key-movement-reset {
-                    padding: 8px 16px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 6px;
-                    color: #fff;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 12px;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .key-movement-reset:hover {
-                    background: rgba(255, 255, 255, 0.15);
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
         return popup;
     }
     
@@ -600,11 +503,11 @@
                         <label>
                             <span>Visibility Mode</span>
                             <select id="key-labels-visibility">
+                                <option value="none">Show None</option>
                                 <option value="pressed" selected>Show Only When Pressed</option>
                                 <option value="always">Always Visible</option>
                             </select>
                         </label>
-                        <div class="key-labels-description">Choose when labels are visible. "Show Only When Pressed" = labels appear when keys are pressed (default). "Always Visible" = labels always shown.</div>
                     </div>
                     
                     <div class="key-labels-setting">
@@ -616,153 +519,32 @@
                                 <option value="flat">Show Flat Only</option>
                             </select>
                         </label>
-                        <div class="key-labels-description">Choose how black keys are labeled. "Show Both" displays both sharp and flat notation (e.g., C#/D♭). "Show Sharp Only" displays only sharp notation (e.g., C#). "Show Flat Only" displays only flat notation (e.g., D♭).</div>
                     </div>
-                    
+                    <div class="key-labels-setting">
+                        <label>
+                            <span>Format</span>
+                            <select id="key-labels-format">
+                                <option value="withOctave">Note + octave (e.g. A3, C1)</option>
+                                <option value="noteOnly" selected>Note only (e.g. A, B, C)</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="key-labels-setting">
+                        <label>
+                            <span>Display</span>
+                            <select id="key-labels-display-mode">
+                                <option value="stickers" selected>Show key stickers</option>
+                                <option value="tags">Show key tags</option>
+                                <option value="both">Show both</option>
+                            </select>
+                        </label>
+                    </div>
                     <div class="key-labels-popup-footer">
                         <button class="key-labels-reset">Reset to Defaults</button>
                     </div>
                 </div>
             </div>
         `;
-        
-        // Add styles (reuse similar styles from key-movement)
-        if (!document.getElementById('key-labels-styles')) {
-            const style = document.createElement('style');
-            style.id = 'key-labels-styles';
-            style.textContent = `
-                .key-labels-popup {
-                    display: none;
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
-                    backdrop-filter: blur(5px);
-                    z-index: 3001;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .key-labels-popup.active {
-                    display: flex;
-                }
-                .key-labels-popup-content {
-                    background: rgba(30, 30, 45, 0.95);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 12px;
-                    padding: 24px;
-                    max-width: 600px;
-                    width: 90%;
-                    max-height: 85vh;
-                    overflow-y: auto;
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-                    position: relative;
-                }
-                .key-labels-popup-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 20px;
-                }
-                .key-labels-popup-header h2 {
-                    margin: 0;
-                    font-family: 'Inter', sans-serif;
-                    font-weight: 600;
-                    font-size: 18px;
-                    color: #fff;
-                }
-                .key-labels-popup-close {
-                    background: none;
-                    border: none;
-                    color: #fff;
-                    font-size: 28px;
-                    cursor: pointer;
-                    padding: 0;
-                    width: 32px;
-                    height: 32px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 4px;
-                    transition: background 0.2s;
-                }
-                .key-labels-popup-close:hover {
-                    background: rgba(255, 255, 255, 0.1);
-                }
-                .key-labels-popup-body {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 20px;
-                }
-                .key-labels-setting {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 6px;
-                }
-                .key-labels-setting label {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    color: #fff;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 13px;
-                }
-                .key-labels-setting label span:first-child {
-                    min-width: 140px;
-                    font-weight: 500;
-                }
-                .key-labels-setting select {
-                    flex: 1;
-                    padding: 6px 12px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 6px;
-                    color: #fff;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 13px;
-                    cursor: pointer;
-                }
-                .key-labels-setting select option {
-                    background: rgba(40, 40, 55, 0.98);
-                    color: #fff;
-                    padding: 8px 12px;
-                }
-                .key-labels-setting select:focus {
-                    outline: none;
-                    border-color: #1a5a3a;
-                    background: rgba(255, 255, 255, 0.15);
-                }
-                .key-labels-description {
-                    font-size: 11px;
-                    color: rgba(255, 255, 255, 0.6);
-                    font-family: 'Inter', sans-serif;
-                    margin-left: 152px;
-                    line-height: 1.4;
-                }
-                .key-labels-popup-footer {
-                    margin-top: 10px;
-                    padding-top: 20px;
-                    border-top: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                .key-labels-reset {
-                    padding: 8px 16px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 6px;
-                    color: #fff;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 12px;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .key-labels-reset:hover {
-                    background: rgba(255, 255, 255, 0.15);
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
         return popup;
     }
     
@@ -777,6 +559,8 @@
         const resetBtn = popup.querySelector('.key-labels-reset');
         const visibilitySelect = document.getElementById('key-labels-visibility');
         const blackKeyModeSelect = document.getElementById('key-labels-black-key-mode');
+        const formatSelect = document.getElementById('key-labels-format');
+        const displayModeSelect = document.getElementById('key-labels-display-mode');
         
         // Close popup
         if (closeBtn) {
@@ -803,25 +587,35 @@
         if (visibilitySelect) {
             visibilitySelect.addEventListener('change', (e) => {
                 const mode = e.target.value;
+                window.keyLabelSettings.showNone = (mode === 'none');
                 window.keyLabelSettings.showOnlyWhenPressed = (mode === 'pressed');
                 window.keyLabelSettings.alwaysVisible = (mode === 'always');
-                
-                if (window.updateAllKeyLabels) {
-                    window.updateAllKeyLabels();
-                }
+                if (window.updateDivLabelsVisibility) window.updateDivLabelsVisibility();
+                if (window.updateAllKeyLabels) window.updateAllKeyLabels();
             });
         }
         
         // Black key label mode select
         if (blackKeyModeSelect) {
             blackKeyModeSelect.addEventListener('change', (e) => {
-                const mode = e.target.value;
-                window.keyLabelSettings.blackKeyLabelMode = mode;
-                
-                // Update all black key labels
-                if (window.updateBlackKeyLabels) {
-                    window.updateBlackKeyLabels();
-                }
+                window.keyLabelSettings.blackKeyLabelMode = e.target.value;
+                if (window.updateBlackKeyLabels) window.updateBlackKeyLabels();
+                if (window.updateAllLabelFormats) window.updateAllLabelFormats();
+            });
+        }
+        // Format: Note + octave vs Note only
+        if (formatSelect) {
+            formatSelect.addEventListener('change', (e) => {
+                window.keyLabelSettings.labelFormat = e.target.value;
+                if (window.updateAllLabelFormats) window.updateAllLabelFormats();
+            });
+        }
+        // Display mode: stickers / tags / both (does not override Key Labels checkbox in Keyboard settings)
+        if (displayModeSelect) {
+            displayModeSelect.addEventListener('change', (e) => {
+                window.keyLabelSettings.labelDisplayMode = e.target.value;
+                if (window.updateDivLabelsVisibility) window.updateDivLabelsVisibility();
+                if (window.updateAllKeyLabels) window.updateAllKeyLabels();
             });
         }
     }
@@ -837,15 +631,21 @@
             const blackKeyModeSelect = document.getElementById('key-labels-black-key-mode');
             
             if (visibilitySelect) {
-                const mode = window.keyLabelSettings.showOnlyWhenPressed ? 'pressed' : 'always';
+                const mode = window.keyLabelSettings.showNone ? 'none' : (window.keyLabelSettings.showOnlyWhenPressed ? 'pressed' : 'always');
                 visibilitySelect.value = mode;
             }
             
             if (blackKeyModeSelect) {
-                const mode = window.keyLabelSettings.blackKeyLabelMode || 'both';
-                blackKeyModeSelect.value = mode;
+                blackKeyModeSelect.value = window.keyLabelSettings.blackKeyLabelMode || 'both';
             }
-            
+            const formatSelect = document.getElementById('key-labels-format');
+            if (formatSelect) {
+                formatSelect.value = window.keyLabelSettings.labelFormat || 'noteOnly';
+            }
+            const displayModeSelect = document.getElementById('key-labels-display-mode');
+            if (displayModeSelect) {
+                displayModeSelect.value = window.keyLabelSettings.labelDisplayMode || 'stickers';
+            }
             popup.classList.add('active');
         }
     }
@@ -856,27 +656,25 @@
     function resetKeyLabelsToDefaults() {
         window.keyLabelSettings.showOnlyWhenPressed = true;
         window.keyLabelSettings.alwaysVisible = false;
+        window.keyLabelSettings.showNone = false;
         window.keyLabelSettings.blackKeyLabelMode = 'both';
+        window.keyLabelSettings.labelFormat = 'noteOnly';
+        window.keyLabelSettings.labelDisplayMode = 'stickers';
         
         // Update UI
         const visibilitySelect = document.getElementById('key-labels-visibility');
         const blackKeyModeSelect = document.getElementById('key-labels-black-key-mode');
+        const formatSelect = document.getElementById('key-labels-format');
+        const displayModeSelect = document.getElementById('key-labels-display-mode');
         
-        if (visibilitySelect) {
-            visibilitySelect.value = 'pressed';
-        }
-        
-        if (blackKeyModeSelect) {
-            blackKeyModeSelect.value = 'both';
-        }
-        
-        if (window.updateAllKeyLabels) {
-            window.updateAllKeyLabels();
-        }
-        
-        if (window.updateBlackKeyLabels) {
-            window.updateBlackKeyLabels();
-        }
+        if (visibilitySelect) visibilitySelect.value = 'pressed';
+        if (blackKeyModeSelect) blackKeyModeSelect.value = 'both';
+        if (formatSelect) formatSelect.value = 'noteOnly';
+        if (displayModeSelect) displayModeSelect.value = 'stickers';
+        if (window.updateDivLabelsVisibility) window.updateDivLabelsVisibility();
+        if (window.updateAllKeyLabels) window.updateAllKeyLabels();
+        if (window.updateBlackKeyLabels) window.updateBlackKeyLabels();
+        if (window.updateAllLabelFormats) window.updateAllLabelFormats();
     }
     
     /**
@@ -908,15 +706,12 @@
         if (midiDebugCheckbox) {
             midiDebugCheckbox.checked = (window.midiDebugSettings && window.midiDebugSettings.enabled) || false;
         }
-    }
-    
-    /**
-     * Clear MIDI debug display
-     */
-    function clearMidiDebugDisplay() {
-        const debugContainer = document.getElementById('midi-debug-container');
-        if (debugContainer) {
-            debugContainer.innerHTML = '';
+        var masterVolSlider = document.getElementById('settings-master-volume');
+        var masterVolValue = document.getElementById('settings-master-volume-value');
+        if (masterVolSlider && masterVolValue && window.synth && window.synth.getMasterVolume) {
+            var p = window.synth.getMasterVolume();
+            masterVolSlider.value = p;
+            masterVolValue.textContent = p + '%';
         }
     }
     
