@@ -1,0 +1,7 @@
+[
+  {"keyLow":0,"keyHigh":47,"originalPitchCents":4500,"file":"0250_Chaos_sf2_file_wavs/zone_0_midi25_keys_0-47.wav","loopStart":1.6107482993197279,"loopEnd":1.6375963718820862},
+  {"keyLow":48,"keyHigh":54,"originalPitchCents":5000,"file":"0250_Chaos_sf2_file_wavs/zone_1_midi25_keys_48-54.wav","loopStart":2.0592743764172336,"loopEnd":2.1337868480725624},
+  {"keyLow":55,"keyHigh":63,"originalPitchCents":5900,"file":"0250_Chaos_sf2_file_wavs/zone_2_midi25_keys_55-63.wav","loopStart":1.536326530612245,"loopEnd":1.6291156462585034},
+  {"keyLow":64,"keyHigh":73,"originalPitchCents":6900,"file":"0250_Chaos_sf2_file_wavs/zone_3_midi25_keys_64-73.wav","loopStart":1.1586394557823129,"loopEnd":1.2061678004535147},
+  {"keyLow":74,"keyHigh":127,"originalPitchCents":7900,"file":"0250_Chaos_sf2_file_wavs/zone_4_midi25_keys_74-127.wav","loopStart":0.8000907029478458,"loopEnd":0.8319274376417233}
+]

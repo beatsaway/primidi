@@ -1,0 +1,908 @@
+[
+    {
+        "id": "000_002_Electric Grand Piano",
+        "slug": "gsl_000_002_Electric_Grand_Piano"
+    },
+    {
+        "id": "000_003_Honky-Tonk Piano",
+        "slug": "gsl_000_003_Honky-Tonk_Piano"
+    },
+    {
+        "id": "000_006_Harpsichord",
+        "slug": "gsl_000_006_Harpsichord"
+    },
+    {
+        "id": "000_007_Clavinet",
+        "slug": "gsl_000_007_Clavinet",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "000_008_Celeste",
+        "slug": "gsl_000_008_Celeste"
+    },
+    {
+        "id": "000_009_Glockenspiel",
+        "slug": "gsl_000_009_Glockenspiel",
+        "defaultSemitone": 2
+    },
+    {
+        "id": "000_010_Music Box",
+        "slug": "gsl_000_010_Music_Box"
+    },
+    {
+        "id": "000_011_Vibraphone",
+        "slug": "gsl_000_011_Vibraphone",
+        "defaultSemitone": 6
+    },
+    {
+        "id": "000_012_Marimba",
+        "slug": "gsl_000_012_Marimba",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "000_013_Xylophone",
+        "slug": "gsl_000_013_Xylophone"
+    },
+    {
+        "id": "000_014_Tubular Bells",
+        "slug": "gsl_000_014_Tubular_Bells",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "000_015_Dulcimer",
+        "slug": "gsl_000_015_Dulcimer"
+    },
+    {
+        "id": "000_016_Tonewheel Organ",
+        "slug": "gsl_000_016_Tonewheel_Organ"
+    },
+    {
+        "id": "000_017_Percussive Organ",
+        "slug": "gsl_000_017_Percussive_Organ"
+    },
+    {
+        "id": "000_018_Rock Organ",
+        "slug": "gsl_000_018_Rock_Organ"
+    },
+    {
+        "id": "000_019_Pipe Organ",
+        "slug": "gsl_000_019_Pipe_Organ",
+        "defaultSemitone": -5
+    },
+    {
+        "id": "000_020_Reed Organ",
+        "slug": "gsl_000_020_Reed_Organ",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "000_021_Accordion",
+        "slug": "gsl_000_021_Accordion"
+    },
+    {
+        "id": "000_022_Harmonica",
+        "slug": "gsl_000_022_Harmonica"
+    },
+    {
+        "id": "000_023_Bandoneon",
+        "slug": "gsl_000_023_Bandoneon"
+    },
+    {
+        "id": "000_024_Nylon Guitar",
+        "slug": "gsl_000_024_Nylon_Guitar"
+    },
+    {
+        "id": "000_025_Steel Guitar",
+        "slug": "gsl_000_025_Steel_Guitar"
+    },
+    {
+        "id": "000_026_Jazz Guitar",
+        "slug": "gsl_000_026_Jazz_Guitar"
+    },
+    {
+        "id": "000_027_Clean Guitar",
+        "slug": "gsl_000_027_Clean_Guitar"
+    },
+    {
+        "id": "000_028_Muted Guitar",
+        "slug": "gsl_000_028_Muted_Guitar"
+    },
+    {
+        "id": "000_029_Overdrive Guitar",
+        "slug": "gsl_000_029_Overdrive_Guitar"
+    },
+    {
+        "id": "000_030_Distortion Guitar",
+        "slug": "gsl_000_030_Distortion_Guitar"
+    },
+    {
+        "id": "000_031_Guitar Harmonics",
+        "slug": "gsl_000_031_Guitar_Harmonics"
+    },
+    {
+        "id": "000_032_Acoustic Bass",
+        "slug": "gsl_000_032_Acoustic_Bass"
+    },
+    {
+        "id": "000_034_Pick Bass",
+        "slug": "gsl_000_034_Pick_Bass"
+    },
+    {
+        "id": "000_039_Synth Bass 2",
+        "slug": "gsl_000_039_Synth_Bass_2"
+    },
+    {
+        "id": "000_041_Viola",
+        "slug": "gsl_000_041_Viola"
+    },
+    {
+        "id": "000_043_Double Bass",
+        "slug": "gsl_000_043_Double_Bass"
+    },
+    {
+        "id": "000_044_Tremolo Strings",
+        "slug": "gsl_000_044_Tremolo_Strings"
+    },
+    {
+        "id": "000_045_Pizzicato Strings",
+        "slug": "gsl_000_045_Pizzicato_Strings"
+    },
+    {
+        "id": "000_046_Orchestral Harp",
+        "slug": "gsl_000_046_Orchestral_Harp"
+    },
+    {
+        "id": "000_047_Timpani",
+        "slug": "gsl_000_047_Timpani"
+    },
+    {
+        "id": "000_048_Fast Strings",
+        "slug": "gsl_000_048_Fast_Strings"
+    },
+    {
+        "id": "000_049_Slow Strings",
+        "slug": "gsl_000_049_Slow_Strings"
+    },
+    {
+        "id": "000_050_Synth Strings 1",
+        "slug": "gsl_000_050_Synth_Strings_1"
+    },
+    {
+        "id": "000_051_Synth Strings 2",
+        "slug": "gsl_000_051_Synth_Strings_2"
+    },
+    {
+        "id": "000_052_Concert Choir",
+        "slug": "gsl_000_052_Concert_Choir"
+    },
+    {
+        "id": "000_053_Voice Oohs",
+        "slug": "gsl_000_053_Voice_Oohs"
+    },
+    {
+        "id": "000_054_Synth Voice",
+        "slug": "gsl_000_054_Synth_Voice"
+    },
+    {
+        "id": "000_055_Orchestra Hit",
+        "slug": "gsl_000_055_Orchestra_Hit",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "000_056_Trumpet",
+        "slug": "gsl_000_056_Trumpet"
+    },
+    {
+        "id": "000_057_Trombone",
+        "slug": "gsl_000_057_Trombone"
+    },
+    {
+        "id": "000_058_Tuba",
+        "slug": "gsl_000_058_Tuba"
+    },
+    {
+        "id": "000_059_Muted Trumpet",
+        "slug": "gsl_000_059_Muted_Trumpet"
+    },
+    {
+        "id": "000_060_French Horns",
+        "slug": "gsl_000_060_French_Horns"
+    },
+    {
+        "id": "000_061_Brass Section",
+        "slug": "gsl_000_061_Brass_Section"
+    },
+    {
+        "id": "000_064_Soprano Sax",
+        "slug": "gsl_000_064_Soprano_Sax"
+    },
+    {
+        "id": "000_065_Alto Sax",
+        "slug": "gsl_000_065_Alto_Sax"
+    },
+    {
+        "id": "000_066_Tenor Sax",
+        "slug": "gsl_000_066_Tenor_Sax"
+    },
+    {
+        "id": "000_067_Baritone Sax",
+        "slug": "gsl_000_067_Baritone_Sax"
+    },
+    {
+        "id": "000_068_Oboe",
+        "slug": "gsl_000_068_Oboe"
+    },
+    {
+        "id": "000_069_English Horn",
+        "slug": "gsl_000_069_English_Horn"
+    },
+    {
+        "id": "000_070_Bassoon",
+        "slug": "gsl_000_070_Bassoon"
+    },
+    {
+        "id": "000_071_Clarinet",
+        "slug": "gsl_000_071_Clarinet"
+    },
+    {
+        "id": "000_072_Piccolo",
+        "slug": "gsl_000_072_Piccolo"
+    },
+    {
+        "id": "000_073_Flute",
+        "slug": "gsl_000_073_Flute"
+    },
+    {
+        "id": "000_074_Recorder",
+        "slug": "gsl_000_074_Recorder"
+    },
+    {
+        "id": "000_075_Pan Flute",
+        "slug": "gsl_000_075_Pan_Flute"
+    },
+    {
+        "id": "000_076_Bottle Blow",
+        "slug": "gsl_000_076_Bottle_Blow"
+    },
+    {
+        "id": "000_077_Shakuhachi",
+        "slug": "gsl_000_077_Shakuhachi"
+    },
+    {
+        "id": "000_079_Ocarina",
+        "slug": "gsl_000_079_Ocarina"
+    },
+    {
+        "id": "000_083_Chiffer Lead",
+        "slug": "gsl_000_083_Chiffer_Lead"
+    },
+    {
+        "id": "000_085_Solo Vox",
+        "slug": "gsl_000_085_Solo_Vox"
+    },
+    {
+        "id": "000_086_5th Saw Wave",
+        "slug": "gsl_000_086_5th_Saw_Wave"
+    },
+    {
+        "id": "000_088_Fantasia",
+        "slug": "gsl_000_088_Fantasia"
+    },
+    {
+        "id": "000_089_Warm Pad",
+        "slug": "gsl_000_089_Warm_Pad"
+    },
+    {
+        "id": "000_090_Polysynth",
+        "slug": "gsl_000_090_Polysynth"
+    },
+    {
+        "id": "000_091_Space Voice",
+        "slug": "gsl_000_091_Space_Voice"
+    },
+    {
+        "id": "000_092_Bowed Glass",
+        "slug": "gsl_000_092_Bowed_Glass"
+    },
+    {
+        "id": "000_093_Metal Pad",
+        "slug": "gsl_000_093_Metal_Pad"
+    },
+    {
+        "id": "000_094_Halo Pad",
+        "slug": "gsl_000_094_Halo_Pad"
+    },
+    {
+        "id": "000_095_Sweep Pad",
+        "slug": "gsl_000_095_Sweep_Pad"
+    },
+    {
+        "id": "000_096_Ice Rain",
+        "slug": "gsl_000_096_Ice_Rain"
+    },
+    {
+        "id": "000_097_Soundtrack",
+        "slug": "gsl_000_097_Soundtrack"
+    },
+    {
+        "id": "000_098_Crystal",
+        "slug": "gsl_000_098_Crystal"
+    },
+    {
+        "id": "000_099_Atmosphere",
+        "slug": "gsl_000_099_Atmosphere"
+    },
+    {
+        "id": "000_100_Brightness",
+        "slug": "gsl_000_100_Brightness"
+    },
+    {
+        "id": "000_101_Goblin",
+        "slug": "gsl_000_101_Goblin"
+    },
+    {
+        "id": "000_102_Echo Drops",
+        "slug": "gsl_000_102_Echo_Drops"
+    },
+    {
+        "id": "000_103_Star Theme",
+        "slug": "gsl_000_103_Star_Theme"
+    },
+    {
+        "id": "000_105_Banjo",
+        "slug": "gsl_000_105_Banjo"
+    },
+    {
+        "id": "000_107_Koto",
+        "slug": "gsl_000_107_Koto"
+    },
+    {
+        "id": "000_108_Kalimba",
+        "slug": "gsl_000_108_Kalimba"
+    },
+    {
+        "id": "000_110_Fiddle",
+        "slug": "gsl_000_110_Fiddle",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "000_111_Shenai",
+        "slug": "gsl_000_111_Shenai"
+    },
+    {
+        "id": "000_112_Tinker Bell",
+        "slug": "gsl_000_112_Tinker_Bell"
+    },
+    {
+        "id": "000_113_Agogo",
+        "slug": "gsl_000_113_Agogo"
+    },
+    {
+        "id": "000_114_Steel Drums",
+        "slug": "gsl_000_114_Steel_Drums"
+    },
+    {
+        "id": "000_115_Wood Block",
+        "slug": "gsl_000_115_Wood_Block"
+    },
+    {
+        "id": "000_116_Taiko Drum",
+        "slug": "gsl_000_116_Taiko_Drum"
+    },
+    {
+        "id": "000_117_Melodic Tom",
+        "slug": "gsl_000_117_Melodic_Tom"
+    },
+    {
+        "id": "000_118_Synth Drum",
+        "slug": "gsl_000_118_Synth_Drum"
+    },
+    {
+        "id": "000_119_Reverse Cymbal",
+        "slug": "gsl_000_119_Reverse_Cymbal"
+    },
+    {
+        "id": "000_120_Fret Noise",
+        "slug": "gsl_000_120_Fret_Noise"
+    },
+    {
+        "id": "000_121_Breath Noise",
+        "slug": "gsl_000_121_Breath_Noise"
+    },
+    {
+        "id": "000_122_Seashore",
+        "slug": "gsl_000_122_Seashore"
+    },
+    {
+        "id": "000_123_Birds",
+        "slug": "gsl_000_123_Birds"
+    },
+    {
+        "id": "000_124_Telephone 1",
+        "slug": "gsl_000_124_Telephone_1",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "000_125_Helicopter",
+        "slug": "gsl_000_125_Helicopter",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "000_126_Applause",
+        "slug": "gsl_000_126_Applause"
+    },
+    {
+        "id": "000_127_Gun Shot",
+        "slug": "gsl_000_127_Gun_Shot"
+    },
+    {
+        "id": "001_044_Tremolo Strings Mono",
+        "slug": "gsl_001_044_Tremolo_Strings_Mono"
+    },
+    {
+        "id": "001_048_Fast Strings Mono",
+        "slug": "gsl_001_048_Fast_Strings_Mono"
+    },
+    {
+        "id": "001_049_Slow Strings Mono",
+        "slug": "gsl_001_049_Slow_Strings_Mono"
+    },
+    {
+        "id": "001_052_Concert Choir Mono",
+        "slug": "gsl_001_052_Concert_Choir_Mono"
+    },
+    {
+        "id": "001_056_Trumpet 2",
+        "slug": "gsl_001_056_Trumpet_2"
+    },
+    {
+        "id": "001_057_Trombone 2",
+        "slug": "gsl_001_057_Trombone_2"
+    },
+    {
+        "id": "001_060_Solo French Horn",
+        "slug": "gsl_001_060_Solo_French_Horn"
+    },
+    {
+        "id": "001_061_Brass Section Mono",
+        "slug": "gsl_001_061_Brass_Section_Mono"
+    },
+    {
+        "id": "001_098_Synth Mallet",
+        "slug": "gsl_001_098_Synth_Mallet"
+    },
+    {
+        "id": "001_120_Cut Noise",
+        "slug": "gsl_001_120_Cut_Noise"
+    },
+    {
+        "id": "001_121_Fl. Key Click",
+        "slug": "gsl_001_121_Fl._Key_Click",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "001_122_Rain",
+        "slug": "gsl_001_122_Rain"
+    },
+    {
+        "id": "001_123_Dog",
+        "slug": "gsl_001_123_Dog"
+    },
+    {
+        "id": "001_124_Telephone 2",
+        "slug": "gsl_001_124_Telephone_2",
+        "defaultSemitone": 2
+    },
+    {
+        "id": "001_125_Car-Engine",
+        "slug": "gsl_001_125_Car-Engine"
+    },
+    {
+        "id": "001_126_Laughing",
+        "slug": "gsl_001_126_Laughing"
+    },
+    {
+        "id": "001_127_Machine Gun",
+        "slug": "gsl_001_127_Machine_Gun",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "002_120_String Slap",
+        "slug": "gsl_002_120_String_Slap"
+    },
+    {
+        "id": "002_122_Thunder",
+        "slug": "gsl_002_122_Thunder"
+    },
+    {
+        "id": "002_123_Horse Gallop",
+        "slug": "gsl_002_123_Horse_Gallop"
+    },
+    {
+        "id": "002_124_Door Creaking",
+        "slug": "gsl_002_124_Door_Creaking"
+    },
+    {
+        "id": "002_125_Car-Stop",
+        "slug": "gsl_002_125_Car-Stop",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "002_126_Scream",
+        "slug": "gsl_002_126_Scream",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "003_123_Bird 2",
+        "slug": "gsl_003_123_Bird_2",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "003_124_Door",
+        "slug": "gsl_003_124_Door"
+    },
+    {
+        "id": "003_125_Car-Pass",
+        "slug": "gsl_003_125_Car-Pass"
+    },
+    {
+        "id": "003_126_Punch",
+        "slug": "gsl_003_126_Punch"
+    },
+    {
+        "id": "003_127_Explosion",
+        "slug": "gsl_003_127_Explosion"
+    },
+    {
+        "id": "004_122_Stream",
+        "slug": "gsl_004_122_Stream"
+    },
+    {
+        "id": "004_124_Scratch",
+        "slug": "gsl_004_124_Scratch"
+    },
+    {
+        "id": "004_125_Car-Crash",
+        "slug": "gsl_004_125_Car-Crash"
+    },
+    {
+        "id": "004_126_Heart Beat",
+        "slug": "gsl_004_126_Heart_Beat"
+    },
+    {
+        "id": "005_122_Bubbles",
+        "slug": "gsl_005_122_Bubbles"
+    },
+    {
+        "id": "005_124_Windchime",
+        "slug": "gsl_005_124_Windchime"
+    },
+    {
+        "id": "005_125_Siren",
+        "slug": "gsl_005_125_Siren"
+    },
+    {
+        "id": "005_126_Footsteps",
+        "slug": "gsl_005_126_Footsteps"
+    },
+    {
+        "id": "006_125_Train",
+        "slug": "gsl_006_125_Train"
+    },
+    {
+        "id": "007_125_Jet Plane",
+        "slug": "gsl_007_125_Jet_Plane"
+    },
+    {
+        "id": "008_005_Chorused FM EP",
+        "slug": "gsl_008_005_Chorused_FM_EP"
+    },
+    {
+        "id": "008_006_Coupled Harpsichord",
+        "slug": "gsl_008_006_Coupled_Harpsichord"
+    },
+    {
+        "id": "008_014_Church Bells",
+        "slug": "gsl_008_014_Church_Bells",
+        "defaultSemitone": -6
+    },
+    {
+        "id": "008_016_Detuned Tnwl. Organ",
+        "slug": "gsl_008_016_Detuned_Tnwl._Organ"
+    },
+    {
+        "id": "008_017_Detuned Perc. Organ",
+        "slug": "gsl_008_017_Detuned_Perc._Organ"
+    },
+    {
+        "id": "008_019_Pipe Organ 2",
+        "slug": "gsl_008_019_Pipe_Organ_2"
+    },
+    {
+        "id": "008_021_Italian Accordion",
+        "slug": "gsl_008_021_Italian_Accordion"
+    },
+    {
+        "id": "008_024_Ukulele",
+        "slug": "gsl_008_024_Ukulele",
+        "defaultSemitone": -3
+    },
+    {
+        "id": "008_025_12-String Guitar",
+        "slug": "gsl_008_025_12-String_Guitar"
+    },
+    {
+        "id": "008_026_Hawaiian Guitar",
+        "slug": "gsl_008_026_Hawaiian_Guitar"
+    },
+    {
+        "id": "008_027_Chorused Clean Gt",
+        "slug": "gsl_008_027_Chorused_Clean_Gt"
+    },
+    {
+        "id": "008_028_Funk Guitar",
+        "slug": "gsl_008_028_Funk_Guitar"
+    },
+    {
+        "id": "008_030_Feedback Guitar",
+        "slug": "gsl_008_030_Feedback_Guitar"
+    },
+    {
+        "id": "008_031_Guitar Feedback",
+        "slug": "gsl_008_031_Guitar_Feedback"
+    },
+    {
+        "id": "008_039_Beef FM Bass",
+        "slug": "gsl_008_039_Beef_FM_Bass"
+    },
+    {
+        "id": "008_048_Orchestra Pad",
+        "slug": "gsl_008_048_Orchestra_Pad"
+    },
+    {
+        "id": "008_050_Synth Strings 3",
+        "slug": "gsl_008_050_Synth_Strings_3"
+    },
+    {
+        "id": "008_061_Brass Section 2",
+        "slug": "gsl_008_061_Brass_Section_2"
+    },
+    {
+        "id": "008_062_Synth Brass 3",
+        "slug": "gsl_008_062_Synth_Brass_3"
+    },
+    {
+        "id": "008_063_Synth Brass 4",
+        "slug": "gsl_008_063_Synth_Brass_4"
+    },
+    {
+        "id": "008_107_Taisho Koto",
+        "slug": "gsl_008_107_Taisho_Koto"
+    },
+    {
+        "id": "008_115_Castanets",
+        "slug": "gsl_008_115_Castanets"
+    },
+    {
+        "id": "008_116_Concert Bass Drum",
+        "slug": "gsl_008_116_Concert_Bass_Drum",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "008_117_Melodic Tom 2",
+        "slug": "gsl_008_117_Melodic_Tom_2"
+    },
+    {
+        "id": "008_125_Starship",
+        "slug": "gsl_008_125_Starship",
+        "defaultSemitone": 4
+    },
+    {
+        "id": "009_014_Carillon",
+        "slug": "gsl_009_014_Carillon",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "011_000_Piano & Str.-Fade",
+        "slug": "gsl_011_000_Piano_and_Str.-Fade"
+    },
+    {
+        "id": "011_001_Piano & Str.-Sus",
+        "slug": "gsl_011_001_Piano_and_Str.-Sus"
+    },
+    {
+        "id": "011_004_Tine & FM EPs",
+        "slug": "gsl_011_004_Tine_and_FM_EPs"
+    },
+    {
+        "id": "011_005_Piano & FM EP",
+        "slug": "gsl_011_005_Piano_and_FM_EP"
+    },
+    {
+        "id": "011_006_Harpsichord noVel",
+        "slug": "gsl_011_006_Harpsichord_noVel"
+    },
+    {
+        "id": "011_008_Tinkling Bells",
+        "slug": "gsl_011_008_Tinkling_Bells",
+        "defaultSemitone": 2
+    },
+    {
+        "id": "011_011_Vibraphone No Trem",
+        "slug": "gsl_011_011_Vibraphone_No_Trem",
+        "defaultSemitone": 6
+    },
+    {
+        "id": "011_014_Bell Tower",
+        "slug": "gsl_011_014_Bell_Tower",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "011_016_Tonewheel Org noVel",
+        "slug": "gsl_011_016_Tonewheel_Org_noVel"
+    },
+    {
+        "id": "011_017_Percussive Org noVel",
+        "slug": "gsl_011_017_Percussive_Org_noVel"
+    },
+    {
+        "id": "011_018_Rock Organ noVel",
+        "slug": "gsl_011_018_Rock_Organ_noVel"
+    },
+    {
+        "id": "011_019_Pipe Organ noVel",
+        "slug": "gsl_011_019_Pipe_Organ_noVel"
+    },
+    {
+        "id": "011_020_Reed Organ noVel",
+        "slug": "gsl_011_020_Reed_Organ_noVel"
+    },
+    {
+        "id": "011_029_Wah Guitar (CC21)",
+        "slug": "gsl_011_029_Wah_Guitar_(CC21)"
+    },
+    {
+        "id": "011_049_Velo Strings",
+        "slug": "gsl_011_049_Velo_Strings"
+    },
+    {
+        "id": "011_050_Synth Strings 4",
+        "slug": "gsl_011_050_Synth_Strings_4",
+        "defaultSemitone": -3
+    },
+    {
+        "id": "011_051_Synth Strings 5",
+        "slug": "gsl_011_051_Synth_Strings_5",
+        "defaultSemitone": -3
+    },
+    {
+        "id": "011_061_Brass Section 3",
+        "slug": "gsl_011_061_Brass_Section_3"
+    },
+    {
+        "id": "011_078_Whistlin'",
+        "slug": "gsl_011_078_Whistlin",
+        "defaultSemitone": -2
+    },
+    {
+        "id": "011_088_Harpsi Pad",
+        "slug": "gsl_011_088_Harpsi_Pad"
+    },
+    {
+        "id": "011_089_Solar Wind",
+        "slug": "gsl_011_089_Solar_Wind"
+    },
+    {
+        "id": "011_096_Mystery Pad",
+        "slug": "gsl_011_096_Mystery_Pad"
+    },
+    {
+        "id": "011_098_Synth Chime",
+        "slug": "gsl_011_098_Synth_Chime"
+    },
+    {
+        "id": "011_100_Bright Saw Stack",
+        "slug": "gsl_011_100_Bright_Saw_Stack"
+    },
+    {
+        "id": "011_119_Cymbal Crash",
+        "slug": "gsl_011_119_Cymbal_Crash"
+    },
+    {
+        "id": "011_121_Filter Snap",
+        "slug": "gsl_011_121_Filter_Snap",
+        "defaultSemitone": 1
+    },
+    {
+        "id": "011_122_Howling Winds",
+        "slug": "gsl_011_122_Howling_Winds"
+    },
+    {
+        "id": "011_127_Interference",
+        "slug": "gsl_011_127_Interference",
+        "defaultSemitone": -2
+    },
+    {
+        "id": "012_000_Bell Piano",
+        "slug": "gsl_012_000_Bell_Piano"
+    },
+    {
+        "id": "012_006_Coupled Harpsi noVel",
+        "slug": "gsl_012_006_Coupled_Harpsi_noVel"
+    },
+    {
+        "id": "012_010_Christmas Bells",
+        "slug": "gsl_012_010_Christmas_Bells"
+    },
+    {
+        "id": "012_017_Detun Perc Org noVel",
+        "slug": "gsl_012_017_Detun_Perc_Org_noVel"
+    },
+    {
+        "id": "012_027_Clean Guitar 2",
+        "slug": "gsl_012_027_Clean_Guitar_2"
+    },
+    {
+        "id": "012_048_Full Orchestra",
+        "slug": "gsl_012_048_Full_Orchestra"
+    },
+    {
+        "id": "012_049_Velo Strings Mono",
+        "slug": "gsl_012_049_Velo_Strings_Mono"
+    },
+    {
+        "id": "012_088_Fantasia 2",
+        "slug": "gsl_012_088_Fantasia_2",
+        "defaultSemitone": -3
+    },
+    {
+        "id": "012_089_Solar Wind 2",
+        "slug": "gsl_012_089_Solar_Wind_2"
+    },
+    {
+        "id": "012_119_Tambourine",
+        "slug": "gsl_012_119_Tambourine"
+    },
+    {
+        "id": "013_048_Woodwind Choir",
+        "slug": "gsl_013_048_Woodwind_Choir"
+    },
+    {
+        "id": "013_088_Night Vision",
+        "slug": "gsl_013_088_Night_Vision"
+    },
+    {
+        "id": "016_025_Mandolin",
+        "slug": "gsl_016_025_Mandolin"
+    },
+    {
+        "id": "024_075_Tin Whistle",
+        "slug": "gsl_024_075_Tin_Whistle",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "025_075_Tin Whistle Nm",
+        "slug": "gsl_025_075_Tin_Whistle_Nm",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "026_075_Tin Whistle Or",
+        "slug": "gsl_026_075_Tin_Whistle_Or",
+        "defaultSemitone": -1
+    },
+    {
+        "id": "120_048_Orchestral Kit",
+        "slug": "gsl_120_048_Orchestral_Kit"
+    },
+    {
+        "id": "120_056_SFX Kit",
+        "slug": "gsl_120_056_SFX_Kit"
+    },
+    {
+        "id": "120_127_CM-64_32L Kit",
+        "slug": "gsl_120_127_CM-64_32L_Kit"
+    },
+    {
+        "id": "128_056_SFX",
+        "slug": "gsl_128_056_SFX"
+    }
+]

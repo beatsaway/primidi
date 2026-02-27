@@ -1,0 +1,2685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waveform Pitch Slicer</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Match primid_v1_06 - no page scrolling */
+        }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        /* Piano canvas styles - match primid_v1_06 exactly */
+        canvas[data-piano-canvas] {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #3a8eef;
+        }
+        #waveform-container {
+            position: relative;
+            background: #000;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 20px 0;
+        }
+        #waveform {
+            display: block;
+            width: 100%;
+            height: 300px;
+        }
+        .region-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            display: none;
+        }
+        .region-info.visible {
+            display: block;
+        }
+        .region-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .region-controls p {
+            margin: 0;
+            flex: 1;
+            min-width: 200px;
+        }
+        canvas {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="piano-container"></div>
+    <div class="container" style="position: relative; z-index: 10;">
+        <div id="waveform-container">
+            <canvas id="waveform"></canvas>
+        </div>
+
+        <div id="region-info" class="region-info"></div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+    <!-- Keyboard Visual & Input Modules -->
+    <script src="keyboard/key-highlight/key-highlight.js"></script>
+    <script src="keyboard/key-movement/key-movement.js"></script>
+    <script src="keyboard/key-labels/key-labels.js"></script>
+    <script src="keyboard/keypress-input/keypress-input.js"></script>
+    <!-- MIDI Modules -->
+    <script src="midi/midi-input/midi-input.js?v=2"></script>
+
+    <script>
+        // Audio context and buffer
+        let audioContext = null;
+        let audioBuffer = null;
+        let audioData = null;
+        let regions = []; // Transient-based regions
+        let currentSource = null;
+        let currentPlayingIndex = -1;
+        let lastPlayedRegionIndex = -1; // Track last played region for Anote
+        let anoteRegionIndex = 0; // Track which region to use for Anote (cycles through)
+        let anoteSource = null; // Track Anote playback source
+        let selectedRegionIndex = -1; // Track selected region for deletion/editing
+
+        // Canvas setup
+        const canvas = document.getElementById('waveform');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            const container = document.getElementById('waveform-container');
+            canvas.width = container.clientWidth - 40;
+            canvas.height = 300;
+            if (audioData) {
+                drawWaveform();
+            }
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Convert HSL to RGB
+        function hslToRgb(hslString) {
+            // Parse HSL string like "hsl(120, 70%, 50%)"
+            const match = hslString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+            if (!match) return { r: 179, g: 179, b: 179 }; // Light grey default
+            
+            const h = parseInt(match[1]) / 360;
+            const s = parseInt(match[2]) / 100;
+            const l = parseInt(match[3]) / 100;
+            
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+                g = Math.round(hue2rgb(p, q, h) * 255);
+                b = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+            }
+            return { r, g, b };
+        }
+
+        // Analyze harmonic profile of a region (simplified approach)
+        function analyzeHarmonics(region) {
+            try {
+                if (!audioBuffer || !audioData || !region) {
+                    console.error('Missing audio buffer, data, or region');
+                    return null;
+                }
+
+                const sampleRate = audioBuffer.sampleRate;
+                const startSample = Math.floor(region.startTime * sampleRate);
+                const endSample = Math.floor(region.endTime * sampleRate);
+                const length = endSample - startSample;
+
+                if (length < 512) {
+                    console.error('Region too short:', length);
+                    return null;
+                }
+
+                // Extract region audio data
+                const regionData = audioData.subarray(startSample, endSample);
+
+                // Apply window function (Hann window)
+                const windowed = new Float32Array(length);
+                for (let i = 0; i < length; i++) {
+                    const window = 0.5 * (1 - Math.cos(2 * Math.PI * i / (length - 1)));
+                    windowed[i] = regionData[i] * window;
+                }
+
+                // Use autocorrelation to find fundamental and harmonics
+                const harmonics = [];
+                const numHarmonics = 10;
+                
+                // Find fundamental using autocorrelation
+                const maxLag = Math.min(Math.floor(sampleRate / 50), length / 2); // 50 Hz minimum
+                const minLag = Math.floor(sampleRate / 2000); // 2000 Hz maximum
+                
+                let maxCorr = 0;
+                let fundamentalLag = minLag;
+                
+                for (let lag = minLag; lag < maxLag; lag++) {
+                    let corr = 0;
+                    for (let i = 0; i < length - lag; i++) {
+                        corr += windowed[i] * windowed[i + lag];
+                    }
+                    corr = Math.abs(corr);
+                    if (corr > maxCorr) {
+                        maxCorr = corr;
+                        fundamentalLag = lag;
+                    }
+                }
+
+                // Extract harmonic amplitudes using autocorrelation at harmonic lags
+                for (let h = 1; h <= numHarmonics; h++) {
+                    const lag = Math.floor(fundamentalLag / h);
+                    if (lag < length / 2) {
+                        let corr = 0;
+                        for (let i = 0; i < length - lag; i++) {
+                            corr += windowed[i] * windowed[i + lag];
+                        }
+                        harmonics.push(Math.abs(corr) / maxCorr); // Normalize to fundamental
+                    } else {
+                        harmonics.push(0);
+                    }
+                }
+
+                // Ensure we have at least some harmonics
+                if (harmonics.length === 0 || harmonics.every(h => h === 0)) {
+                    // Fallback: use simple decreasing amplitudes
+                    for (let h = 1; h <= numHarmonics; h++) {
+                        harmonics.push(1.0 / h); // 1, 0.5, 0.33, etc.
+                    }
+                }
+
+                return {
+                    harmonics: harmonics,
+                    fundamentalLag: fundamentalLag
+                };
+            } catch (error) {
+                console.error('Error analyzing harmonics:', error);
+                // Fallback: return simple harmonic profile
+                const harmonics = [];
+                for (let h = 1; h <= 10; h++) {
+                    harmonics.push(1.0 / h);
+                }
+                return { harmonics: harmonics, fundamentalLag: 0 };
+            }
+        }
+
+        // Get spectral profile using FFT (better for timbre)
+        function getSpectralProfile(region) {
+            if (!audioBuffer || !audioData || !region) return null;
+
+            const sampleRate = audioBuffer.sampleRate;
+            const startSample = Math.floor(region.startTime * sampleRate);
+            const endSample = Math.floor(region.endTime * sampleRate);
+            const length = endSample - startSample;
+
+            if (length < 2048) return null;
+
+            // Extract and window the region
+            const regionData = audioData.subarray(startSample, endSample);
+            const windowed = new Float32Array(length);
+            for (let i = 0; i < length; i++) {
+                const window = 0.5 * (1 - Math.cos(2 * Math.PI * i / (length - 1)));
+                windowed[i] = regionData[i] * window;
+            }
+
+            // Use Web Audio API AnalyserNode for FFT
+            const ctx = getAudioContext();
+            const tempBuffer = ctx.createBuffer(1, length, sampleRate);
+            tempBuffer.getChannelData(0).set(windowed);
+            
+            // Create analyser for FFT
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = Math.pow(2, Math.floor(Math.log2(length)));
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Float32Array(bufferLength);
+
+            // Use offline context for analysis
+            const offlineCtx = new OfflineAudioContext(1, length, sampleRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = tempBuffer;
+            const analyserOffline = offlineCtx.createAnalyser();
+            analyserOffline.fftSize = Math.pow(2, Math.floor(Math.log2(length)));
+            source.connect(analyserOffline);
+            analyserOffline.connect(offlineCtx.destination);
+            source.start(0);
+
+            return offlineCtx.startRendering().then(() => {
+                analyserOffline.getFloatFrequencyData(dataArray);
+                
+                // Convert to magnitude spectrum
+                const magnitudes = [];
+                for (let i = 0; i < bufferLength; i++) {
+                    magnitudes.push(Math.pow(10, dataArray[i] / 20)); // Convert dB to linear
+                }
+                
+                // Find fundamental and extract harmonics
+                const binFreq = sampleRate / (2 * bufferLength);
+                let maxMag = 0;
+                let fundamentalBin = 0;
+                
+                // Search in typical frequency range (50-2000 Hz)
+                const minBin = Math.floor(50 / binFreq);
+                const maxBin = Math.floor(2000 / binFreq);
+                
+                for (let i = minBin; i < Math.min(maxBin, bufferLength); i++) {
+                    if (magnitudes[i] > maxMag) {
+                        maxMag = magnitudes[i];
+                        fundamentalBin = i;
+                    }
+                }
+
+                // Extract harmonic amplitudes
+                const harmonics = [];
+                const numHarmonics = 20;
+                for (let h = 1; h <= numHarmonics; h++) {
+                    const bin = Math.floor(fundamentalBin * h);
+                    if (bin < bufferLength) {
+                        harmonics.push(magnitudes[bin] / maxMag);
+                    } else {
+                        harmonics.push(0);
+                    }
+                }
+
+                return { harmonics, fundamentalBin };
+            });
+        }
+
+        // Fast pitch detection on a small sample
+        function detectPitchFast(audioData, sampleRate) {
+            if (!audioData || audioData.length < 512) return null;
+            
+            // Only analyze first 0.2 seconds for speed
+            const maxSamples = Math.min(Math.floor(sampleRate * 0.2), audioData.length);
+            const sample = audioData.subarray(0, maxSamples);
+            
+            // Simple autocorrelation on smaller sample
+            const maxLag = Math.min(Math.floor(sampleRate / 50), sample.length / 2);
+            const minLag = Math.floor(sampleRate / 2000);
+            
+            let maxCorr = 0;
+            let bestLag = minLag;
+            
+            for (let lag = minLag; lag < maxLag; lag += 2) { // Step by 2 for speed
+                let corr = 0;
+                for (let i = 0; i < sample.length - lag; i += 2) { // Step by 2 for speed
+                    corr += sample[i] * sample[i + lag];
+                }
+                corr = Math.abs(corr);
+                if (corr > maxCorr) {
+                    maxCorr = corr;
+                    bestLag = lag;
+                }
+            }
+            
+            if (maxCorr < 0.1) return null; // Too weak signal
+            return sampleRate / bestLag;
+        }
+
+        // Synthesize note A (440 Hz) using region's timbre - cycles through regions
+        async function playAnoteWithHarmonics(specificRegionIndex = null) {
+            try {
+                if (!audioBuffer || regions.length === 0) {
+                    updateStatus('Error: No regions available. Please create regions first.');
+                    return;
+                }
+
+                // Stop any currently playing Anote
+                if (anoteSource) {
+                    try {
+                        anoteSource.stop();
+                    } catch (e) {}
+                    anoteSource = null;
+                }
+
+                // Use specific region if provided, otherwise cycle through regions
+                let regionIndex;
+                if (specificRegionIndex !== null && specificRegionIndex >= 0 && specificRegionIndex < regions.length) {
+                    regionIndex = specificRegionIndex;
+                    // Update the cycle index to continue from this point
+                    anoteRegionIndex = (specificRegionIndex + 1) % regions.length;
+                } else {
+                    // Cycle through regions in turn
+                    regionIndex = anoteRegionIndex;
+                    // Increment for next time (cycle back to 0 after last region)
+                    anoteRegionIndex = (anoteRegionIndex + 1) % regions.length;
+                }
+                
+                const selectedRegion = regions[regionIndex];
+                
+                updateStatus(`Playing note A from region ${regionIndex + 1}...`);
+
+                const ctx = getAudioContext();
+                if (ctx.state === 'suspended') {
+                    await ctx.resume();
+                }
+
+                // Extract region audio
+                const sampleRate = audioBuffer.sampleRate;
+                const regionStartSample = Math.floor(selectedRegion.startTime * sampleRate);
+                const regionEndSample = Math.floor(selectedRegion.endTime * sampleRate);
+                const regionLength = regionEndSample - regionStartSample;
+
+                if (regionLength < 512) {
+                    updateStatus('Error: Region too short');
+                    return;
+                }
+
+                // Extract region audio
+                const regionData = audioData.subarray(regionStartSample, regionEndSample);
+                
+                // Get original note from region, or detect pitch if not available
+                let originalFrequency = null;
+                let noteInfo = '';
+                
+                if (selectedRegion && selectedRegion.note) {
+                    // Use stored note information
+                    originalFrequency = noteNameToFrequency(selectedRegion.note);
+                    noteInfo = selectedRegion.note;
+                } else {
+                    // Fallback to pitch detection if note not stored
+                    const detectedPitch = detectPitchFast(regionData, sampleRate);
+                    if (detectedPitch && detectedPitch > 50 && detectedPitch < 2000) {
+                        originalFrequency = detectedPitch;
+                        noteInfo = `detected: ${detectedPitch.toFixed(1)} Hz`;
+                    }
+                }
+                
+                // Create buffer from region (loop if needed to get ~1 second)
+                const targetDuration = 1.0;
+                const targetLength = Math.floor(sampleRate * targetDuration);
+                const buffer = ctx.createBuffer(1, targetLength, sampleRate);
+                const outputData = buffer.getChannelData(0);
+                
+                // Fill buffer by looping the region
+                for (let i = 0; i < targetLength; i++) {
+                    const sourceIndex = i % regionLength;
+                    outputData[i] = regionData[sourceIndex];
+                }
+                
+                // Apply fade in/out to prevent clicks
+                const fadeSamples = Math.floor(sampleRate * 0.01); // 10ms fade
+                for (let i = 0; i < fadeSamples; i++) {
+                    const fade = i / fadeSamples;
+                    outputData[i] *= fade;
+                    outputData[targetLength - 1 - i] *= fade;
+                }
+
+                // Play with pitch adjustment using playbackRate
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                
+                // Adjust playback rate to pitch to A4 (440 Hz)
+                if (originalFrequency && originalFrequency > 50 && originalFrequency < 2000) {
+                    const playbackRate = 440 / originalFrequency;
+                    source.playbackRate.value = playbackRate;
+                    updateStatus(`Playing note A4 (440 Hz) from region ${regionIndex + 1} (original: ${noteInfo})`);
+                } else {
+                    updateStatus(`Playing note A4 from region ${regionIndex + 1} (no pitch information available)`);
+                }
+                
+                // Set up source and track it BEFORE highlighting
+                source.connect(ctx.destination);
+                anoteSource = source; // Track for stopping - set BEFORE drawWaveform
+                
+                // Highlight the region being used
+                currentPlayingIndex = regionIndex;
+                drawWaveform(); // Redraw to show highlight (now anoteSource is set)
+                
+                source.start(0);
+                
+                source.onended = () => {
+                    // Remove highlight when done
+                    if (currentPlayingIndex === regionIndex) {
+                        currentPlayingIndex = -1;
+                        drawWaveform();
+                    }
+                    anoteSource = null;
+                    updateStatus('Anote playback finished');
+                };
+                
+            } catch (error) {
+                updateStatus('Error: ' + error.message);
+                console.error('Error in playAnoteWithHarmonics:', error);
+                if (currentPlayingIndex >= 0) {
+                    currentPlayingIndex = -1;
+                    drawWaveform();
+                }
+            }
+        }
+
+        // YIN pitch detection (for detecting region pitch)
+        function detectPitchYIN(audioData, sampleRate = 44100, threshold = 0.1) {
+            if (!audioData || audioData.length < 64) return null;
+
+            let bufferSize = 1;
+            while (bufferSize < audioData.length) bufferSize *= 2;
+            bufferSize /= 2;
+
+            const yinBufferLength = Math.floor(bufferSize / 2);
+            const yinBuffer = new Float32Array(yinBufferLength);
+
+            for (let t = 0; t < yinBufferLength; t++) {
+                yinBuffer[t] = 0;
+            }
+            for (let t = 1; t < yinBufferLength; t++) {
+                for (let i = 0; i < yinBufferLength && (i + t) < audioData.length; i++) {
+                    const delta = audioData[i] - audioData[i + t];
+                    yinBuffer[t] += delta * delta;
+                }
+            }
+
+            yinBuffer[0] = 1;
+            yinBuffer[1] = 1;
+            let runningSum = 0;
+            for (let t = 1; t < yinBufferLength; t++) {
+                runningSum += yinBuffer[t];
+                yinBuffer[t] *= t / runningSum;
+            }
+
+            let tau = 2;
+            for (tau = 2; tau < yinBufferLength; tau++) {
+                if (yinBuffer[tau] < threshold) {
+                    while (tau + 1 < yinBufferLength && yinBuffer[tau + 1] < yinBuffer[tau]) {
+                        tau++;
+                    }
+                    break;
+                }
+            }
+
+            if (tau >= yinBufferLength || yinBuffer[tau] >= threshold) {
+                return null;
+            }
+
+            let betterTau, x0, x2;
+            x0 = tau < 1 ? tau : tau - 1;
+            x2 = tau + 1 < yinBufferLength ? tau + 1 : tau;
+
+            if (x0 === tau) {
+                betterTau = yinBuffer[tau] <= yinBuffer[x2] ? tau : x2;
+            } else if (x2 === tau) {
+                betterTau = yinBuffer[tau] <= yinBuffer[x0] ? tau : x0;
+            } else {
+                const s0 = yinBuffer[x0];
+                const s1 = yinBuffer[tau];
+                const s2 = yinBuffer[x2];
+                betterTau = tau + (s2 - s0) / (2 * (2 * s1 - s2 - s0));
+            }
+
+            return sampleRate / betterTau;
+        }
+
+        // Get audio context
+        function getAudioContext() {
+            if (!audioContext) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioContext = new AudioContextClass();
+            }
+            return audioContext;
+        }
+
+        // Convert frequency to MIDI note
+        function frequencyToMidi(frequency) {
+            if (!frequency || frequency <= 0) return null;
+            return Math.round(69 + 12 * Math.log2(frequency / 440));
+        }
+
+        // Get note name from MIDI note
+        function getNoteName(midiNote) {
+            if (!midiNote) return 'N/A';
+            const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const octave = Math.floor(midiNote / 12) - 1;
+            const note = notes[midiNote % 12];
+            return note + octave;
+        }
+
+        // Convert note name (e.g., "F4", "D#4") to frequency in Hz
+        function noteNameToFrequency(noteName) {
+            if (!noteName) return null;
+            
+            const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            
+            // Parse note name (e.g., "F4", "D#4", "C#4")
+            // Match note (with optional #) followed by octave number
+            const match = noteName.match(/^([A-G])(#?)(\d+)$/);
+            if (!match) return null;
+            
+            const noteLetter = match[1];
+            const sharp = match[2];
+            const octave = parseInt(match[3]);
+            
+            // Construct full note name
+            const note = sharp ? noteLetter + '#' : noteLetter;
+            const noteIndex = notes.indexOf(note);
+            if (noteIndex === -1) return null;
+            
+            // Calculate MIDI note number (A4 = 69, C4 = 60)
+            const midiNote = (octave + 1) * 12 + noteIndex;
+            
+            // Convert MIDI note to frequency
+            // A4 (MIDI 69) = 440 Hz
+            const frequency = 440 * Math.pow(2, (midiNote - 69) / 12);
+            
+            return frequency;
+        }
+
+        // Each region has different hue, same saturation and lightness
+        function getColorForRegion(index) {
+            // Different hue for each region, same saturation and lightness
+            const hue = (index * 60) % 360; // 60 degree steps for good color separation
+            const saturation = 30; // Low saturation for subtle tint
+            const lightness = 70; // Light tone
+            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        }
+
+        // Get opacity value (0-1)
+        function getRegionOpacity() {
+            // Opacity slider removed, use default value
+            return 0.4; // 40% default opacity
+        }
+
+        // Detect transients - fewer, more distinct ones
+        function detectTransients(threshold = 0.25, minDistance = 1.0) {
+            if (!audioData || !audioBuffer) {
+                return [];
+            }
+
+            const sampleRate = audioBuffer.sampleRate;
+            const data = audioData;
+            const minDistanceSamples = Math.floor(minDistance * sampleRate);
+
+            // Calculate energy in windows (using RMS)
+            const windowSize = Math.floor(0.01 * sampleRate); // 10ms windows
+            const energy = [];
+
+            for (let i = 0; i < data.length - windowSize; i += windowSize) {
+                let sumSquared = 0;
+                for (let j = 0; j < windowSize && (i + j) < data.length; j++) {
+                    const val = data[i + j];
+                    sumSquared += val * val;
+                }
+                energy.push(Math.sqrt(sumSquared / windowSize)); // RMS
+            }
+
+            // Find strong transients only (higher threshold, larger look-ahead/back)
+            const allTransients = [];
+            const lookAhead = 10; // Larger window for more distinct peaks
+            const lookBack = 10;
+
+            for (let i = lookBack; i < energy.length - lookAhead; i++) {
+                const currentEnergy = energy[i];
+
+                // Check if this is a local maximum
+                let isLocalMax = true;
+                for (let j = i - lookBack; j <= i + lookAhead; j++) {
+                    if (j !== i && energy[j] >= currentEnergy) {
+                        isLocalMax = false;
+                        break;
+                    }
+                }
+
+                if (isLocalMax) {
+                    // Calculate adaptive threshold with higher threshold
+                    let surroundingSum = 0;
+                    let surroundingCount = 0;
+                    for (let j = Math.max(0, i - 20); j < Math.min(energy.length, i + 20); j++) {
+                        if (j !== i) {
+                            surroundingSum += energy[j];
+                            surroundingCount++;
+                        }
+                    }
+                    const avgSurrounding = surroundingCount > 0 ? surroundingSum / surroundingCount : 0;
+                    const adaptiveThreshold = avgSurrounding * (1 + threshold);
+
+                    if (currentEnergy > adaptiveThreshold) {
+                        const sampleIndex = i * windowSize;
+                        const time = sampleIndex / sampleRate;
+                        allTransients.push({ time: time, sampleIndex: sampleIndex, energy: currentEnergy });
+                    }
+                }
+            }
+
+            // Sort by energy (highest first) to get the strongest transients
+            allTransients.sort((a, b) => b.energy - a.energy);
+            
+            // Take top transients, then sort by time and enforce minimum distance
+            const topTransients = allTransients.slice(0, Math.min(20, allTransients.length));
+            topTransients.sort((a, b) => a.time - b.time);
+            
+            // Filter to ensure minimum distance between transients
+            const uniqueTransients = [];
+            for (const t of topTransients) {
+                if (uniqueTransients.length === 0 || 
+                    (t.time - uniqueTransients[uniqueTransients.length - 1].time) >= minDistance) {
+                    uniqueTransients.push(t);
+                }
+            }
+
+            // Always include start
+            if (uniqueTransients.length === 0 || uniqueTransients[0].time > 0.1) {
+                uniqueTransients.unshift({ time: 0, sampleIndex: 0, energy: energy[0] || 0 });
+            }
+
+            return uniqueTransients;
+        }
+
+        // Detect note onsets within a time range using spectral flux
+        function detectOnsetsInRange(startTime, endTime, sampleRate, data) {
+            const startSample = Math.floor(startTime * sampleRate);
+            const endSample = Math.floor(endTime * sampleRate);
+            const rangeData = data.subarray(startSample, endSample);
+            
+            if (rangeData.length < 2048) return []; // Need minimum samples for analysis
+            
+            const windowSize = Math.floor(0.01 * sampleRate); // 10ms windows
+            const hopSize = windowSize;
+            const fftSize = 2048;
+            const onsets = [];
+            
+            let prevSpectrum = null;
+            
+            for (let i = 0; i < rangeData.length - fftSize; i += hopSize) {
+                const window = rangeData.subarray(i, i + fftSize);
+                
+                // Apply window function (Hann)
+                const windowed = new Float32Array(fftSize);
+                for (let j = 0; j < fftSize; j++) {
+                    const windowValue = 0.5 * (1 - Math.cos(2 * Math.PI * j / (fftSize - 1)));
+                    windowed[j] = window[j] * windowValue;
+                }
+                
+                // Simple FFT approximation using autocorrelation for spectral flux
+                const spectrum = new Float32Array(fftSize / 2);
+                for (let k = 0; k < spectrum.length; k++) {
+                    let sum = 0;
+                    for (let j = 0; j < fftSize - k; j++) {
+                        sum += windowed[j] * windowed[j + k];
+                    }
+                    spectrum[k] = Math.abs(sum);
+                }
+                
+                // Calculate spectral flux (change in spectrum)
+                if (prevSpectrum) {
+                    let flux = 0;
+                    for (let k = 0; k < spectrum.length; k++) {
+                        const diff = spectrum[k] - prevSpectrum[k];
+                        if (diff > 0) flux += diff;
+                    }
+                    
+                    // Normalize by energy
+                    let energy = 0;
+                    for (let k = 0; k < spectrum.length; k++) {
+                        energy += spectrum[k];
+                    }
+                    const normalizedFlux = energy > 0 ? flux / energy : 0;
+                    
+                    // Threshold for onset detection
+                    if (normalizedFlux > 0.15) { // Adjustable threshold
+                        const time = startTime + (i / sampleRate);
+                        onsets.push(time);
+                    }
+                }
+                
+                prevSpectrum = spectrum;
+            }
+            
+            return onsets;
+        }
+
+        // Detect pitch changes within a time range
+        function detectPitchChangesInRange(startTime, endTime, sampleRate, data) {
+            const startSample = Math.floor(startTime * sampleRate);
+            const endSample = Math.floor(endTime * sampleRate);
+            const rangeData = data.subarray(startSample, endSample);
+            
+            if (rangeData.length < 2048) return [];
+            
+            const windowSize = Math.floor(0.1 * sampleRate); // 100ms windows
+            const hopSize = Math.floor(0.05 * sampleRate); // 50ms hop
+            const pitchChanges = [];
+            let prevPitch = null;
+            
+            for (let i = 0; i < rangeData.length - windowSize; i += hopSize) {
+                const window = rangeData.subarray(i, i + windowSize);
+                
+                // Simple pitch detection using autocorrelation
+                const maxLag = Math.min(Math.floor(sampleRate / 50), windowSize / 2);
+                const minLag = Math.floor(sampleRate / 2000);
+                
+                let maxCorr = 0;
+                let bestLag = minLag;
+                
+                for (let lag = minLag; lag < maxLag; lag++) {
+                    let corr = 0;
+                    for (let j = 0; j < windowSize - lag; j++) {
+                        corr += window[j] * window[j + lag];
+                    }
+                    corr = Math.abs(corr);
+                    if (corr > maxCorr) {
+                        maxCorr = corr;
+                        bestLag = lag;
+                    }
+                }
+                
+                if (maxCorr > 0.1) { // Minimum correlation threshold
+                    const pitch = sampleRate / bestLag;
+                    
+                    if (prevPitch !== null) {
+                        // Check for significant pitch change (more than 2 semitones)
+                        const semitoneChange = Math.abs(12 * Math.log2(pitch / prevPitch));
+                        if (semitoneChange > 2.0) {
+                            const time = startTime + (i / sampleRate);
+                            pitchChanges.push(time);
+                        }
+                    }
+                    prevPitch = pitch;
+                }
+            }
+            
+            return pitchChanges;
+        }
+
+        // Enhanced fixed intervals with note boundary detection
+        function sliceByFixedIntervals() {
+            const duration = audioBuffer.duration;
+            const interval = 1.5; // 1.5 seconds per region (base interval)
+            const minDuration = 1.0;
+            const maxDuration = 2.0;
+            const sampleRate = audioBuffer.sampleRate;
+            const data = audioData;
+            
+            // Check if note boundary detection is enabled (defaulting to true since UI removed)
+            const detectBoundaries = true;
+
+            regions = [];
+            let currentTime = 0;
+
+            while (currentTime < duration) {
+                let baseEndTime = Math.min(currentTime + interval, duration);
+                let endTime = baseEndTime;
+                
+                // Only detect note boundaries if enabled
+                if (detectBoundaries) {
+                    // Detect note boundaries within this interval
+                    const onsets = detectOnsetsInRange(currentTime, baseEndTime, sampleRate, data);
+                    const pitchChanges = detectPitchChangesInRange(currentTime, baseEndTime, sampleRate, data);
+                    
+                    // Combine and sort all potential split points
+                    const splitPoints = [...new Set([...onsets, ...pitchChanges])].sort((a, b) => a - b);
+                    
+                    // Filter split points to ensure minimum duration between regions
+                    const validSplits = [];
+                    let lastSplit = currentTime;
+                    
+                    for (const split of splitPoints) {
+                        // Only add split if it's far enough from start and previous split
+                        if (split > currentTime + minDuration && split > lastSplit + minDuration) {
+                            // Check if we can create a valid region before this split
+                            if (split - currentTime >= minDuration && split - currentTime <= maxDuration) {
+                                validSplits.push(split);
+                                lastSplit = split;
+                            }
+                        }
+                    }
+                    
+                    // If we found valid splits, use the first one; otherwise use base interval
+                    if (validSplits.length > 0) {
+                        // Use first valid split that creates a region within duration constraints
+                        const firstValidSplit = validSplits[0];
+                        if (firstValidSplit - currentTime >= minDuration && firstValidSplit - currentTime <= maxDuration) {
+                            endTime = firstValidSplit;
+                        }
+                    }
+                }
+                
+                // Ensure minimum duration
+                let regionDuration = endTime - currentTime;
+                if (regionDuration >= minDuration) {
+                    // Cap at max duration
+                    if (regionDuration > maxDuration) {
+                        endTime = currentTime + maxDuration;
+                    }
+
+                    regions.push({
+                        startTime: currentTime,
+                        endTime: endTime,
+                        index: regions.length
+                    });
+
+                    currentTime = endTime;
+                } else {
+                    // If remaining time is too short, extend last region or skip
+                    if (regions.length > 0) {
+                        regions[regions.length - 1].endTime = duration;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Slice by energy changes
+        function sliceByEnergy() {
+            const sampleRate = audioBuffer.sampleRate;
+            const data = audioData;
+            const duration = audioBuffer.duration;
+            const windowSize = Math.floor(0.1 * sampleRate); // 100ms windows
+            const minDuration = 1.0;
+            const maxDuration = 2.0;
+
+            // Calculate energy for each window
+            const energy = [];
+            for (let i = 0; i < data.length - windowSize; i += windowSize) {
+                let sumSquared = 0;
+                for (let j = 0; j < windowSize && (i + j) < data.length; j++) {
+                    sumSquared += data[i + j] * data[i + j];
+                }
+                energy.push({
+                    time: i / sampleRate,
+                    value: Math.sqrt(sumSquared / windowSize)
+                });
+            }
+
+            // Find significant energy changes
+            const slicePoints = [0];
+            const threshold = 0.3; // 30% change threshold
+
+            for (let i = 1; i < energy.length; i++) {
+                const change = Math.abs(energy[i].value - energy[i - 1].value) / Math.max(energy[i].value, energy[i - 1].value, 0.001);
+                if (change > threshold) {
+                    slicePoints.push(energy[i].time);
+                }
+            }
+            slicePoints.push(duration);
+
+            // Create regions
+            regions = [];
+            for (let i = 0; i < slicePoints.length - 1; i++) {
+                const startTime = slicePoints[i];
+                let endTime = slicePoints[i + 1];
+                let regionDuration = endTime - startTime;
+
+                if (regionDuration >= minDuration) {
+                    if (regionDuration > maxDuration) {
+                        endTime = startTime + maxDuration;
+                    }
+                    regions.push({
+                        startTime: startTime,
+                        endTime: endTime,
+                        index: regions.length
+                    });
+                }
+            }
+        }
+
+        // Slice by silence detection
+        function sliceBySilence() {
+            const sampleRate = audioBuffer.sampleRate;
+            const data = audioData;
+            const duration = audioBuffer.duration;
+            const windowSize = Math.floor(0.05 * sampleRate); // 50ms windows
+            const minDuration = 1.0;
+            const maxDuration = 2.0;
+            const silenceThreshold = 0.05; // RMS threshold for silence
+
+            // Calculate energy for each window
+            const energy = [];
+            for (let i = 0; i < data.length - windowSize; i += windowSize) {
+                let sumSquared = 0;
+                for (let j = 0; j < windowSize && (i + j) < data.length; j++) {
+                    sumSquared += data[i + j] * data[i + j];
+                }
+                energy.push({
+                    time: i / sampleRate,
+                    value: Math.sqrt(sumSquared / windowSize)
+                });
+            }
+
+            // Find average energy to determine silence threshold
+            let totalEnergy = 0;
+            for (const e of energy) {
+                totalEnergy += e.value;
+            }
+            const avgEnergy = totalEnergy / energy.length;
+            const adaptiveSilenceThreshold = avgEnergy * silenceThreshold;
+
+            // Find silence regions
+            const slicePoints = [0];
+            let inSilence = false;
+            let silenceStart = 0;
+
+            for (let i = 0; i < energy.length; i++) {
+                const isSilent = energy[i].value < adaptiveSilenceThreshold;
+
+                if (isSilent && !inSilence) {
+                    // Entering silence
+                    inSilence = true;
+                    silenceStart = energy[i].time;
+                } else if (!isSilent && inSilence) {
+                    // Exiting silence - slice here
+                    const silenceMid = (silenceStart + energy[i].time) / 2;
+                    slicePoints.push(silenceMid);
+                    inSilence = false;
+                }
+            }
+            slicePoints.push(duration);
+
+            // Create regions
+            regions = [];
+            for (let i = 0; i < slicePoints.length - 1; i++) {
+                const startTime = slicePoints[i];
+                let endTime = slicePoints[i + 1];
+                let regionDuration = endTime - startTime;
+
+                if (regionDuration >= minDuration) {
+                    if (regionDuration > maxDuration) {
+                        endTime = startTime + maxDuration;
+                    }
+                    regions.push({
+                        startTime: startTime,
+                        endTime: endTime,
+                        index: regions.length
+                    });
+                }
+            }
+        }
+
+        // Analyze audio based on selected method
+        async function analyzePitchRegions(method = 'transient') {
+            if (!audioBuffer || !audioData) {
+                updateStatus('Error: No audio loaded');
+                return;
+            }
+
+            const minDuration = 1.0;
+            const maxDuration = 2.0;
+
+            regions = [];
+
+            switch (method) {
+                case 'transient':
+                    updateStatus('Detecting transients...');
+                    const transients = detectTransients(0.25, 1.0);
+                    updateStatus(`Found ${transients.length} transients, creating regions...`);
+
+                    for (let i = 0; i < transients.length; i++) {
+                        const startTime = transients[i].time;
+                        let endTime;
+
+                        if (i < transients.length - 1) {
+                            endTime = transients[i + 1].time;
+                        } else {
+                            endTime = audioBuffer.duration;
+                        }
+
+                        let regionDuration = endTime - startTime;
+
+                        if (regionDuration >= minDuration) {
+                            if (regionDuration > maxDuration) {
+                                endTime = startTime + maxDuration;
+                            }
+                            regions.push({
+                                startTime: startTime,
+                                endTime: endTime,
+                                index: regions.length
+                            });
+                        }
+                    }
+                    break;
+
+                case 'fixed':
+                    updateStatus('Creating fixed interval regions...');
+                    // Note: detectNoteBoundaries checkbox removed, defaulting to true
+                    sliceByFixedIntervals();
+                    break;
+
+                case 'energy':
+                    updateStatus('Analyzing energy changes...');
+                    sliceByEnergy();
+                    break;
+
+                case 'silence':
+                    updateStatus('Detecting silence regions...');
+                    sliceBySilence();
+                    break;
+            }
+
+            updateStatus(`Created ${regions.length} regions (${minDuration}s - ${maxDuration}s each). Click on waveform to play.`);
+            anoteRegionIndex = 0; // Reset to first region when new regions are created
+            selectedRegionIndex = -1; // Clear selection when new regions are created
+            drawWaveform();
+            updateLegend();
+            updateRegionInfo();
+        }
+
+        // Draw waveform with pitch regions
+        function drawWaveform() {
+            if (!audioData || !audioBuffer) return;
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const data = audioData;
+            const step = Math.max(1, Math.ceil(data.length / w));
+            const amp = h / 2;
+            const duration = audioBuffer.duration;
+
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw waveform first (background)
+            ctx.fillStyle = '#fff';
+            for (let i = 0; i < w; i++) {
+                let min = 1.0;
+                let max = -1.0;
+                
+                for (let j = 0; j < step; j++) {
+                    const idx = (i * step) + j;
+                    if (idx < data.length) {
+                        const datum = data[idx];
+                        if (datum < min) min = datum;
+                        if (datum > max) max = datum;
+                    }
+                }
+                
+                const rectHeight = Math.max(1, (max - min) * amp);
+                const rectY = (1 + min) * amp;
+                ctx.fillRect(i, rectY, 1, rectHeight);
+            }
+
+            // Draw regions as colored rectangular areas on top
+            if (regions.length > 0) {
+                const baseOpacity = getRegionOpacity();
+                for (let i = 0; i < regions.length; i++) {
+                    const region = regions[i];
+                    const startX = (region.startTime / duration) * w;
+                    const endX = (region.endTime / duration) * w;
+                    const color = getColorForRegion(i);
+                    
+                    // Convert HSL to RGB for alpha blending
+                    const rgb = hslToRgb(color);
+                    // Highlight if this region is being used for Anote OR if it's being played normally
+                    const isAnoteActive = (i === currentPlayingIndex && anoteSource);
+                    const isNormalPlay = (i === currentPlayingIndex && !anoteSource && currentSource);
+                    const isSelected = (i === selectedRegionIndex);
+                    
+                    let opacity = baseOpacity;
+                    if (isAnoteActive || isNormalPlay) {
+                        opacity = Math.min(baseOpacity + 0.3, 0.9);
+                    } else if (isSelected) {
+                        opacity = Math.min(baseOpacity + 0.2, 0.85);
+                    }
+                    
+                    // Draw full-height colored rectangle with alpha
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                    ctx.fillRect(startX, 0, endX - startX, h);
+                    
+                    // Draw selection border and handles
+                    if (isSelected) {
+                        ctx.strokeStyle = '#4a9eff';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(startX, 0, endX - startX, h);
+                        
+                        // Draw resize handles at boundaries
+                        const handleWidth = 8;
+                        const handleHeight = h;
+                        
+                        // Left handle
+                        ctx.fillStyle = '#4a9eff';
+                        ctx.fillRect(startX - handleWidth/2, 0, handleWidth, handleHeight);
+                        
+                        // Right handle
+                        ctx.fillRect(endX - handleWidth/2, 0, handleWidth, handleHeight);
+                    }
+                }
+            }
+
+            // No labels - just colored regions
+        }
+
+        // Update legend (no longer used, but kept for compatibility)
+        function updateLegend() {
+            // Legend removed from UI
+        }
+
+        // Stop currently playing audio
+        function stopPlaying() {
+            if (currentSource) {
+                try {
+                    currentSource.stop();
+                } catch (e) {
+                    // Source might already be stopped
+                }
+                currentSource = null;
+            }
+            if (anoteSource) {
+                try {
+                    anoteSource.stop();
+                } catch (e) {
+                    // Source might already be stopped
+                }
+                anoteSource = null;
+            }
+            if (currentPlayingIndex >= 0) {
+                currentPlayingIndex = -1;
+                drawWaveform(); // Redraw to remove highlight
+            }
+        }
+
+        // Play a specific region
+        async function playRegion(regionIndex) {
+            if (!audioBuffer || regionIndex < 0 || regionIndex >= regions.length) {
+                return;
+            }
+
+            // Stop any currently playing audio
+            stopPlaying();
+
+            const region = regions[regionIndex];
+            const ctx = getAudioContext();
+            
+            // Resume audio context if suspended
+            if (ctx.state === 'suspended') {
+                await ctx.resume();
+            }
+
+            try {
+                // Extract the audio segment
+                const sampleRate = audioBuffer.sampleRate;
+                const startSample = Math.floor(region.startTime * sampleRate);
+                const endSample = Math.floor(region.endTime * sampleRate);
+                const length = endSample - startSample;
+
+                if (length <= 0) {
+                    updateStatus('Error: Invalid region duration');
+                    return;
+                }
+
+                // Create a new buffer for the segment
+                const segmentBuffer = ctx.createBuffer(
+                    audioBuffer.numberOfChannels,
+                    length,
+                    sampleRate
+                );
+
+                // Copy audio data from the original buffer
+                for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                    const originalData = audioBuffer.getChannelData(channel);
+                    const segmentData = segmentBuffer.getChannelData(channel);
+                    segmentData.set(originalData.subarray(startSample, endSample));
+                }
+
+                // Apply fade-in/fade-out to prevent clicks
+                const fadeLength = Math.min(Math.floor(sampleRate * 0.01), length / 4); // 10ms or 1/4 of segment
+                for (let channel = 0; channel < segmentBuffer.numberOfChannels; channel++) {
+                    const segmentData = segmentBuffer.getChannelData(channel);
+                    for (let i = 0; i < fadeLength; i++) {
+                        const fade = i / fadeLength;
+                        segmentData[i] *= fade;
+                        segmentData[length - 1 - i] *= fade;
+                    }
+                }
+
+                // Create and play the source
+                currentSource = ctx.createBufferSource();
+                currentSource.buffer = segmentBuffer;
+                currentSource.connect(ctx.destination);
+
+                // Update UI
+                currentPlayingIndex = regionIndex;
+                lastPlayedRegionIndex = regionIndex; // Track for Anote
+                drawWaveform(); // Redraw to highlight playing region
+
+                // Update status
+                const regionDuration = (region.endTime - region.startTime).toFixed(3);
+                updateStatus(`Playing Region ${regionIndex + 1}: ${region.startTime.toFixed(3)}s - ${region.endTime.toFixed(3)}s (${regionDuration}s)`);
+
+                // Handle playback end
+                currentSource.onended = () => {
+                    stopPlaying();
+                    updateStatus('Playback finished');
+                };
+
+                // Start playback
+                currentSource.start(0);
+
+            } catch (error) {
+                updateStatus('Error playing region: ' + error.message);
+                console.error(error);
+                stopPlaying();
+            }
+        }
+
+        // Delete a region
+        function deleteRegion(regionIndex) {
+            if (regionIndex < 0 || regionIndex >= regions.length) return;
+            
+            regions.splice(regionIndex, 1);
+            
+            // Update indices for remaining regions
+            for (let i = 0; i < regions.length; i++) {
+                regions[i].index = i;
+            }
+            
+            // Clear selection if deleted region was selected
+            if (selectedRegionIndex === regionIndex) {
+                selectedRegionIndex = -1;
+            } else if (selectedRegionIndex > regionIndex) {
+                selectedRegionIndex--; // Adjust selection index
+            }
+            
+            // Update anote index if needed
+            if (anoteRegionIndex >= regions.length) {
+                anoteRegionIndex = 0;
+            }
+            
+            drawWaveform();
+            updateRegionInfo();
+            updateStatus(`Deleted region. ${regions.length} regions remaining.`);
+        }
+
+        // Select a region
+        function selectRegion(regionIndex) {
+            if (regionIndex === selectedRegionIndex) {
+                // Deselect if clicking the same region
+                selectedRegionIndex = -1;
+            } else {
+                selectedRegionIndex = regionIndex;
+            }
+            drawWaveform(); // Redraw to show/hide selection border
+            updateRegionInfo();
+        }
+
+        // Download selected region as WAV
+        async function downloadRegionAsWav(regionIndex) {
+            if (!audioBuffer || regionIndex < 0 || regionIndex >= regions.length) {
+                return;
+            }
+
+            const region = regions[regionIndex];
+            const ctx = getAudioContext();
+            const sampleRate = audioBuffer.sampleRate;
+            const startSample = Math.floor(region.startTime * sampleRate);
+            const endSample = Math.floor(region.endTime * sampleRate);
+            const length = endSample - startSample;
+
+            if (length <= 0) {
+                updateStatus('Error: Invalid region duration');
+                return;
+            }
+
+            try {
+                // Create a new buffer for the segment
+                const segmentBuffer = ctx.createBuffer(
+                    audioBuffer.numberOfChannels,
+                    length,
+                    sampleRate
+                );
+
+                // Copy audio data from the original buffer
+                for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                    const originalData = audioBuffer.getChannelData(channel);
+                    const segmentData = segmentBuffer.getChannelData(channel);
+                    segmentData.set(originalData.subarray(startSample, endSample));
+                }
+
+                // Apply fade-in/fade-out to prevent clicks
+                const fadeLength = Math.min(Math.floor(sampleRate * 0.01), length / 4);
+                for (let channel = 0; channel < segmentBuffer.numberOfChannels; channel++) {
+                    const segmentData = segmentBuffer.getChannelData(channel);
+                    for (let i = 0; i < fadeLength; i++) {
+                        const fade = i / fadeLength;
+                        segmentData[i] *= fade;
+                        segmentData[length - 1 - i] *= fade;
+                    }
+                }
+
+                // Convert AudioBuffer to WAV
+                const wav = audioBufferToWav(segmentBuffer);
+                const blob = new Blob([wav], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `region_${regionIndex + 1}_${region.startTime.toFixed(2)}s_${region.endTime.toFixed(2)}s.wav`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                updateStatus(`Downloaded region ${regionIndex + 1} as WAV`);
+            } catch (error) {
+                updateStatus('Error downloading region: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // Convert AudioBuffer to WAV format
+        function audioBufferToWav(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1; // PCM
+            const bitDepth = 16;
+
+            const bytesPerSample = bitDepth / 8;
+            const blockAlign = numChannels * bytesPerSample;
+
+            const length = buffer.length;
+            const arrayBuffer = new ArrayBuffer(44 + length * numChannels * bytesPerSample);
+            const view = new DataView(arrayBuffer);
+
+            // WAV header
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + length * numChannels * bytesPerSample, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true); // fmt chunk size
+            view.setUint16(20, format, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * blockAlign, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitDepth, true);
+            writeString(36, 'data');
+            view.setUint32(40, length * numChannels * bytesPerSample, true);
+
+            // Convert float samples to 16-bit PCM
+            let offset = 44;
+            for (let i = 0; i < length; i++) {
+                for (let channel = 0; channel < numChannels; channel++) {
+                    const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+                    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+
+            return arrayBuffer;
+        }
+
+        // Update region info - only show controls for selected region
+        function updateRegionInfo() {
+            const info = document.getElementById('region-info');
+            
+            if (regions.length === 0 || selectedRegionIndex < 0) {
+                info.classList.remove('visible');
+                info.innerHTML = '';
+                return;
+            }
+
+            const region = regions[selectedRegionIndex];
+            const duration = (region.endTime - region.startTime).toFixed(3);
+            const color = getColorForRegion(selectedRegionIndex);
+            
+            info.classList.add('visible');
+            info.innerHTML = `
+                <div class="region-controls">
+                    <p><strong>Region ${selectedRegionIndex + 1}:</strong> ${region.startTime.toFixed(3)}s - ${region.endTime.toFixed(3)}s (${duration}s)</p>
+                    <button id="playRegionBtn" style="background: #9b59b6;">Play Region</button>
+                    <button id="playAnoteBtn" style="background: #4a9eff;">Play Anote</button>
+                </div>
+            `;
+
+            // Add event listeners
+            document.getElementById('playRegionBtn').addEventListener('click', () => {
+                playRegion(selectedRegionIndex);
+            });
+
+            document.getElementById('playAnoteBtn').addEventListener('click', () => {
+                playAnoteWithHarmonics(selectedRegionIndex);
+            });
+        }
+
+        // Update status (no longer used, but kept for compatibility)
+        function updateStatus(message) {
+            // Status display removed from UI
+            console.log(message);
+        }
+
+        // Load audio file
+        async function loadAudioFile(file) {
+            try {
+                updateStatus('Loading audio...');
+                const ctx = getAudioContext();
+                const arrayBuffer = await file.arrayBuffer();
+                audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                audioData = audioBuffer.getChannelData(0);
+                
+                updateStatus(`Loaded: ${file.name} (${audioBuffer.duration.toFixed(2)}s, ${audioBuffer.sampleRate}Hz)`);
+                drawWaveform();
+            } catch (error) {
+                updateStatus('Error loading audio: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // Load default audio
+        async function loadDefaultAudio() {
+            try {
+                updateStatus('Loading default audio...');
+                const ctx = getAudioContext();
+                const filename = 'DBM_TC_78_Erhu_Loop_Melody_Heroes_Dsmin.wav';
+                
+                // Replace # with %23 for proper URL encoding (since # is a fragment identifier)
+                const url = filename.replace(/#/g, '%23');
+                
+                updateStatus('Fetching audio file...');
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (contentType && !contentType.includes('audio') && !contentType.includes('octet-stream')) {
+                    console.warn('Unexpected content type:', contentType);
+                }
+                
+                updateStatus('Reading audio data...');
+                const arrayBuffer = await response.arrayBuffer();
+                
+                if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+                    throw new Error('Received empty audio file');
+                }
+                
+                updateStatus('Decoding audio data (this may take a moment)...');
+                audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                
+                if (!audioBuffer || audioBuffer.length === 0) {
+                    throw new Error('Decoded audio buffer is empty');
+                }
+                
+                audioData = audioBuffer.getChannelData(0);
+                
+                updateStatus(`Loaded: ${filename} (${audioBuffer.duration.toFixed(2)}s, ${audioBuffer.sampleRate}Hz, ${audioBuffer.numberOfChannels} channel(s))`);
+                
+                // Create predefined regions for default audio
+                regions = [
+                    { startTime: 1.754, endTime: 2.878, index: 0, note: 'F4' },
+                    { startTime: 3.750, endTime: 5.710, index: 1, note: 'D#4' },
+                    { startTime: 9.421, endTime: 11.730, index: 2, note: 'D#4' },
+                    { startTime: 13.898, endTime: 14.989, index: 3, note: 'F4' },
+                    { startTime: 15.675, endTime: 17.675, index: 4, note: 'D#4' },
+                    { startTime: 20.768, endTime: 22.019, index: 5, note: 'C#4' }
+                ];
+                
+                // Sort regions by start time
+                regions.sort((a, b) => a.startTime - b.startTime);
+                // Update indices after sorting
+                regions.forEach((region, index) => {
+                    region.index = index;
+                });
+                
+                anoteRegionIndex = 0;
+                selectedRegionIndex = -1;
+                drawWaveform();
+                updateLegend();
+                updateRegionInfo();
+                updateStatus(`Loaded ${regions.length} predefined regions. Click on waveform to select a region.`);
+            } catch (error) {
+                const errorMsg = error.message || 'Unknown error';
+                updateStatus('Error loading default audio: ' + errorMsg);
+                console.error('Full error:', error);
+                console.error('Error stack:', error.stack);
+                // Provide helpful message
+                updateStatus('Error: ' + errorMsg + '. You can use the file input above to load the audio file manually.');
+            }
+        }
+
+        // Automatically load default audio on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDefaultAudio();
+        });
+
+        // ========== 3D Piano Integration ==========
+        // This will be initialized after audio loads
+        let pianoScene = null;
+        let pianoCamera = null;
+        let pianoRenderer = null;
+        let pianoControls = null;
+        let pianoKeyMap = new Map(); // MIDI note -> { mesh, isBlack, originalMaterial, pressedMaterial, label, originalY, isPressed, midiNote }
+        let currentPianoRegionIndex = 0; // Track which region to use for piano notes (global fallback)
+        
+        // Track active note sources for proper release
+        const activeNoteSources = new Map(); // midiNote -> { source, gainNode, buffer, regionIndex, decayAutomation }
+        const sustainedNotes = new Set(); // Notes held by sustain pedal
+        const physicallyHeldNotes = new Set(); // Notes where key is currently pressed
+        let sustainPedalActive = false;
+        
+        // Track region index per note for independent cycling
+        const noteRegionIndices = new Map(); // midiNote -> current region index for this note
+        
+        // Track sustain decay automations
+        const sustainDecayAutomations = new Map(); // midiNote -> { timeout, startTime }
+
+        // Initialize 3D piano
+        async function initialize3DPiano() {
+            if (pianoScene) return; // Already initialized
+
+            try {
+                // Import Three.js
+                const THREE = await import('three');
+                const { OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js');
+                
+                window.THREE = THREE;
+
+                // Create scene
+                pianoScene = new THREE.Scene();
+                pianoScene.background = new THREE.Color(0x001007);
+
+                // Create camera
+                pianoCamera = new THREE.PerspectiveCamera(
+                    50,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+                pianoCamera.position.set(0.995, 1.338, 1.232);
+                pianoCamera.rotation.set(-0.826, 0.501, 0.480);
+                pianoCamera.fov = 50;
+                pianoCamera.updateProjectionMatrix();
+
+                // Create renderer
+                pianoRenderer = new THREE.WebGLRenderer({ 
+                    antialias: true,
+                    powerPreference: "high-performance",
+                    alpha: true
+                });
+                pianoRenderer.setSize(window.innerWidth, window.innerHeight);
+                pianoRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                pianoRenderer.shadowMap.enabled = true;
+                pianoRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                pianoRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+                pianoRenderer.toneMappingExposure = 1.2;
+                pianoRenderer.outputColorSpace = THREE.SRGBColorSpace;
+                
+                // Append canvas directly to document.body like primid_v1_06
+                // Set styles exactly like primid_v1_06 (via JavaScript)
+                pianoRenderer.domElement.style.position = 'fixed';
+                pianoRenderer.domElement.style.top = '0';
+                pianoRenderer.domElement.style.left = '0';
+                pianoRenderer.domElement.style.margin = '0';
+                pianoRenderer.domElement.style.padding = '0';
+                pianoRenderer.domElement.style.zIndex = '1'; // Match primid_v1_06
+                // Mark for CSS width/height
+                pianoRenderer.domElement.setAttribute('data-piano-canvas', 'true');
+                document.body.appendChild(pianoRenderer.domElement);
+                
+                // Verify canvas has valid dimensions (OrbitControls needs this)
+                const canvasRect = pianoRenderer.domElement.getBoundingClientRect();
+                if (canvasRect.width === 0 || canvasRect.height === 0 || isNaN(canvasRect.width) || isNaN(canvasRect.height)) {
+                    console.error('Canvas has invalid dimensions when creating OrbitControls:', canvasRect);
+                    // Force valid size
+                    pianoRenderer.setSize(window.innerWidth, window.innerHeight);
+                }
+                
+                // Add orbit controls (matching primid_v1_06 setup exactly)
+                // #region agent log
+                const canvasRectAtInit = pianoRenderer.domElement.getBoundingClientRect();
+                const innerWAtInit = window.innerWidth;
+                const innerHAtInit = window.innerHeight;
+                const aspectAtInit = innerWAtInit / innerHAtInit;
+                fetch('http://127.0.0.1:7242/ingest/49ccc481-38c5-4f1a-830d-fdd227044a24',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'slice.html:1669',message:'Creating OrbitControls',data:{canvasRect:{width:canvasRectAtInit.width,height:canvasRectAtInit.height},innerWidth:innerWAtInit,innerHeight:innerHAtInit,aspect:aspectAtInit,camPos:{x:pianoCamera.position.x,y:pianoCamera.position.y,z:pianoCamera.position.z},camAspect:pianoCamera.aspect},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
+                
+                pianoControls = new OrbitControls(pianoCamera, pianoRenderer.domElement);
+                pianoControls.enableDamping = true;
+                pianoControls.dampingFactor = 0.05;
+                pianoControls.target.set(0.000, 0.000, 0.000);
+                pianoControls.update();
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/49ccc481-38c5-4f1a-830d-fdd227044a24',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'slice.html:1673',message:'OrbitControls created and updated',data:{camPos:{x:pianoCamera.position.x,y:pianoCamera.position.y,z:pianoCamera.position.z},controlsTarget:{x:pianoControls.target.x,y:pianoControls.target.y,z:pianoControls.target.z}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
+
+                // Materials
+                const whiteKeyMaterial = new THREE.MeshPhysicalMaterial({
+                    color: 0xd0d0d0,
+                    metalness: 0.0,
+                    roughness: 0.3,
+                    clearcoat: 0.5,
+                    clearcoatRoughness: 0.2,
+                    reflectivity: 0.5
+                });
+
+                const blackKeyMaterial = new THREE.MeshPhysicalMaterial({
+                    color: 0x404040,
+                    metalness: 0.0,
+                    roughness: 0.4,
+                    clearcoat: 0.3,
+                    clearcoatRoughness: 0.3,
+                    reflectivity: 0.3
+                });
+
+                // Initialize key highlight module
+                if (window.initKeyHighlight) {
+                    window.initKeyHighlight(whiteKeyMaterial, blackKeyMaterial);
+                }
+
+                // Key dimensions
+                const whiteKeyWidth = 0.15;
+                const whiteKeyHeight = 0.1;
+                const whiteKeyDepth = 0.8;
+                const whiteKeySpacing = 0.16;
+                const blackKeyWidth = 0.075;
+                const blackKeyHeight = 0.07;
+                const blackKeyDepth = 0.5;
+
+                // Generate key labels (A0 to C8)
+                const keyLabels = [];
+                keyLabels.push('A0', 'B0');
+                for (let octave = 1; octave <= 7; octave++) {
+                    keyLabels.push(`C${octave}`, `D${octave}`, `E${octave}`, `F${octave}`, `G${octave}`, `A${octave}`, `B${octave}`);
+                }
+                keyLabels.push('C8');
+
+                // Helper functions
+                function noteNameToMidiNote(noteName) {
+                    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                    const match = noteName.match(/^([A-G]#?)(\d+)$/);
+                    if (!match) return null;
+                    const note = match[1];
+                    const octave = parseInt(match[2]);
+                    const noteIndex = noteNames.indexOf(note);
+                    if (noteIndex === -1) return null;
+                    return (octave + 1) * 12 + noteIndex;
+                }
+
+                function midiNoteToNoteName(midiNote) {
+                    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                    const octave = Math.floor(midiNote / 12) - 1;
+                    const note = noteNames[midiNote % 12];
+                    return note + octave;
+                }
+
+                // Create white keys
+                const whiteKeyGeometry = new THREE.BoxGeometry(whiteKeyWidth, whiteKeyHeight, whiteKeyDepth);
+                const numWhiteKeys = keyLabels.length;
+                const whiteKeyPositions = [];
+
+                for (let i = 0; i < numWhiteKeys; i++) {
+                    const key = new THREE.Mesh(whiteKeyGeometry, whiteKeyMaterial.clone());
+                    const originalMaterial = key.material;
+                    const xPosition = (i - numWhiteKeys / 2) * whiteKeySpacing + whiteKeySpacing / 2;
+                    whiteKeyPositions.push(xPosition);
+                    key.position.set(xPosition, whiteKeyHeight / 2, 0);
+                    key.castShadow = true;
+                    key.receiveShadow = true;
+                    pianoScene.add(key);
+
+                    const fullLabel = keyLabels[i];
+                    const midiNote = noteNameToMidiNote(fullLabel);
+                    if (midiNote !== null) {
+                        let pressedMaterial = null;
+                        if (window.getKeyPressedMaterial && window.isKeyHighlightInitialized && window.isKeyHighlightInitialized()) {
+                            pressedMaterial = window.getKeyPressedMaterial(false);
+                        }
+                        
+                        const keyData = {
+                            mesh: key,
+                            isBlack: false,
+                            originalMaterial: originalMaterial,
+                            pressedMaterial: pressedMaterial,
+                            label: fullLabel,
+                            originalY: whiteKeyHeight / 2,
+                            isPressed: false,
+                            midiNote: midiNote
+                        };
+                        pianoKeyMap.set(midiNote, keyData);
+                    }
+                }
+
+                // Create black keys
+                const blackKeyGeometry = new THREE.BoxGeometry(blackKeyWidth, blackKeyHeight, blackKeyDepth);
+                
+                function shouldHaveBlackKey(note1, note2) {
+                    const blackKeyPairs = [['C', 'D'], ['D', 'E'], ['F', 'G'], ['G', 'A'], ['A', 'B']];
+                    return blackKeyPairs.some(pair => pair[0] === note1[0] && pair[1] === note2[0]);
+                }
+
+                function getBlackKeyMidiNote(currentNote, nextNote) {
+                    const currentMidi = noteNameToMidiNote(currentNote);
+                    return currentMidi !== null ? currentMidi + 1 : null;
+                }
+
+                for (let i = 0; i < numWhiteKeys - 1; i++) {
+                    const currentNote = keyLabels[i];
+                    const nextNote = keyLabels[i + 1];
+                    
+                    if (shouldHaveBlackKey(currentNote, nextNote)) {
+                        const blackKey = new THREE.Mesh(blackKeyGeometry, blackKeyMaterial.clone());
+                        const originalMaterial = blackKey.material;
+                        const xPosition = (whiteKeyPositions[i] + whiteKeyPositions[i + 1]) / 2;
+                        const whiteKeyBackEdge = -whiteKeyDepth / 2;
+                        const blackKeyZ = whiteKeyBackEdge + blackKeyDepth / 2;
+                        blackKey.position.set(xPosition, whiteKeyHeight + blackKeyHeight / 2, blackKeyZ);
+                        blackKey.castShadow = true;
+                        blackKey.receiveShadow = true;
+                        pianoScene.add(blackKey);
+                        
+                        const midiNote = getBlackKeyMidiNote(currentNote, nextNote);
+                        if (midiNote !== null) {
+                            let pressedMaterial = null;
+                            if (window.getKeyPressedMaterial && window.isKeyHighlightInitialized && window.isKeyHighlightInitialized()) {
+                                pressedMaterial = window.getKeyPressedMaterial(true);
+                            }
+                            
+                            const sharpNoteName = midiNoteToNoteName(midiNote);
+                            const blackKeyY = whiteKeyHeight + blackKeyHeight / 2;
+                            const keyData = {
+                                mesh: blackKey,
+                                isBlack: true,
+                                originalMaterial: originalMaterial,
+                                pressedMaterial: pressedMaterial,
+                                label: sharpNoteName,
+                                originalY: blackKeyY,
+                                isPressed: false,
+                                midiNote: midiNote
+                            };
+                            pianoKeyMap.set(midiNote, keyData);
+                        }
+                    }
+                }
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+                pianoScene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                directionalLight.position.set(5, 8, 5);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                pianoScene.add(directionalLight);
+
+                const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+                fillLight.position.set(-5, 3, -5);
+                pianoScene.add(fillLight);
+
+                // Animation loop with error handling
+                function animatePiano() {
+                    try {
+                        requestAnimationFrame(animatePiano);
+                        
+                        if (!pianoRenderer || !pianoScene || !pianoCamera) {
+                            return; // Don't render if components are missing
+                        }
+                        
+                        // #region agent log
+                        // Log camera state before OrbitControls.update() to detect NaN propagation
+                        const camPosBefore = {x: pianoCamera.position.x, y: pianoCamera.position.y, z: pianoCamera.position.z};
+                        const camRotBefore = {x: pianoCamera.rotation.x, y: pianoCamera.rotation.y, z: pianoCamera.rotation.z};
+                        const camAspectBefore = pianoCamera.aspect;
+                        const canvasRectBefore = pianoRenderer.domElement.getBoundingClientRect();
+                        const hasNaNBefore = isNaN(camPosBefore.x) || isNaN(camPosBefore.y) || isNaN(camPosBefore.z) || 
+                                           isNaN(camRotBefore.x) || isNaN(camRotBefore.y) || isNaN(camRotBefore.z) ||
+                                           isNaN(camAspectBefore) || isNaN(canvasRectBefore.width) || isNaN(canvasRectBefore.height);
+                        if (hasNaNBefore) {
+                            fetch('http://127.0.0.1:7242/ingest/49ccc481-38c5-4f1a-830d-fdd227044a24',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'slice.html:1848',message:'NaN detected BEFORE controls.update',data:{camPos:camPosBefore,camRot:camRotBefore,camAspect:camAspectBefore,canvasRect:{width:canvasRectBefore.width,height:canvasRectBefore.height}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                        }
+                        // #endregion
+                        
+                        // Fix: Validate camera state and canvas dimensions before OrbitControls.update()
+                        // This prevents NaN propagation from invalid calculations
+                        if (pianoControls) {
+                            // Validate camera position/rotation are not NaN
+                            const camPos = pianoCamera.position;
+                            const camRot = pianoCamera.rotation;
+                            const hasInvalidCamera = isNaN(camPos.x) || isNaN(camPos.y) || isNaN(camPos.z) ||
+                                                    isNaN(camRot.x) || isNaN(camRot.y) || isNaN(camRot.z) ||
+                                                    isNaN(pianoCamera.aspect) || pianoCamera.aspect <= 0;
+                            
+                            // Validate canvas dimensions
+                            const canvasRect = pianoRenderer.domElement.getBoundingClientRect();
+                            const hasInvalidCanvas = canvasRect.width <= 0 || canvasRect.height <= 0 ||
+                                                     isNaN(canvasRect.width) || isNaN(canvasRect.height);
+                            
+                            if (hasInvalidCamera || hasInvalidCanvas) {
+                                // Reset camera to default position if invalid state detected
+                                pianoCamera.position.set(0.995, 1.338, 1.232);
+                                pianoCamera.rotation.set(-0.826, 0.501, 0.480);
+                                pianoCamera.aspect = window.innerWidth / window.innerHeight;
+                                pianoCamera.updateProjectionMatrix();
+                                pianoControls.target.set(0.000, 0.000, 0.000);
+                                // Force renderer size to match window (fixes canvas dimension mismatch)
+                                pianoRenderer.setSize(window.innerWidth, window.innerHeight);
+                            } else {
+                                pianoControls.update();
+                            }
+                        }
+                        
+                        // #region agent log
+                        // Log camera state after OrbitControls.update() to detect when NaN is introduced
+                        const camPosAfter = {x: pianoCamera.position.x, y: pianoCamera.position.y, z: pianoCamera.position.z};
+                        const camRotAfter = {x: pianoCamera.rotation.x, y: pianoCamera.rotation.y, z: pianoCamera.rotation.z};
+                        const hasNaNAfter = isNaN(camPosAfter.x) || isNaN(camPosAfter.y) || isNaN(camPosAfter.z) || 
+                                          isNaN(camRotAfter.x) || isNaN(camRotAfter.y) || isNaN(camRotAfter.z);
+                        if (hasNaNAfter && !hasNaNBefore) {
+                            fetch('http://127.0.0.1:7242/ingest/49ccc481-38c5-4f1a-830d-fdd227044a24',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'slice.html:1850',message:'NaN introduced BY controls.update',data:{camPosBefore:camPosBefore,camPosAfter:camPosAfter,camRotBefore:camRotBefore,camRotAfter:camRotAfter,camAspect:camAspectBefore,canvasRect:{width:canvasRectBefore.width,height:canvasRectBefore.height}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                        }
+                        // #endregion
+                        
+                        // Update key animations
+                        if (window.updateKeyAnimations) {
+                            try {
+                                const currentTime = performance.now() / 1000;
+                                window.updateKeyAnimations(currentTime);
+                            } catch (e) {
+                                console.warn('Error updating key animations:', e);
+                            }
+                        }
+                        
+                        pianoRenderer.render(pianoScene, pianoCamera);
+                    } catch (error) {
+                        console.error('Error in piano animation loop:', error);
+                        // Continue animation loop even if there's an error
+                        requestAnimationFrame(animatePiano);
+                    }
+                }
+                animatePiano();
+
+                // #region agent log
+                // Add wheel event listener to capture canvas dimensions and camera state during zoom
+                pianoRenderer.domElement.addEventListener('wheel', (e) => {
+                    const canvasRect = pianoRenderer.domElement.getBoundingClientRect();
+                    const innerW = window.innerWidth;
+                    const innerH = window.innerHeight;
+                    const aspect = innerW / innerH;
+                    const camPos = {x: pianoCamera.position.x, y: pianoCamera.position.y, z: pianoCamera.position.z};
+                    const camRot = {x: pianoCamera.rotation.x, y: pianoCamera.rotation.y, z: pianoCamera.rotation.z};
+                    const camAspect = pianoCamera.aspect;
+                    const deltaY = e.deltaY;
+                    const hasNaN = isNaN(camPos.x) || isNaN(camPos.y) || isNaN(camPos.z) || 
+                                 isNaN(camRot.x) || isNaN(camRot.y) || isNaN(camRot.z) ||
+                                 isNaN(camAspect) || isNaN(canvasRect.width) || isNaN(canvasRect.height) ||
+                                 isNaN(aspect);
+                    fetch('http://127.0.0.1:7242/ingest/49ccc481-38c5-4f1a-830d-fdd227044a24',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'slice.html:1870',message:'Wheel event',data:{deltaY:deltaY,canvasRect:{width:canvasRect.width,height:canvasRect.height},innerWidth:innerW,innerHeight:innerH,aspect:aspect,camAspect:camAspect,camPos:camPos,camRot:camRot,hasNaN:hasNaN},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                }, { passive: true });
+                // #endregion
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    try {
+                        if (pianoCamera && pianoRenderer) {
+                            // #region agent log
+                            const innerW = window.innerWidth;
+                            const innerH = window.innerHeight;
+                            const aspectCalc = innerW / innerH;
+                            const canvasRect = pianoRenderer.domElement.getBoundingClientRect();
+                            fetch('http://127.0.0.1:7242/ingest/49ccc481-38c5-4f1a-830d-fdd227044a24',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'slice.html:1872',message:'Window resize event',data:{innerWidth:innerW,innerHeight:innerH,aspectCalc:aspectCalc,canvasRect:{width:canvasRect.width,height:canvasRect.height},camAspectBefore:pianoCamera.aspect},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                            // #endregion
+                            
+                            // Fix: Validate dimensions before updating to prevent NaN
+                            const newWidth = window.innerWidth;
+                            const newHeight = window.innerHeight;
+                            if (newWidth > 0 && newHeight > 0 && !isNaN(newWidth) && !isNaN(newHeight)) {
+                                const newAspect = newWidth / newHeight;
+                                if (!isNaN(newAspect) && newAspect > 0 && isFinite(newAspect)) {
+                                    pianoCamera.aspect = newAspect;
+                                    pianoCamera.updateProjectionMatrix();
+                                    pianoRenderer.setSize(newWidth, newHeight);
+                                }
+                            }
+                            
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/49ccc481-38c5-4f1a-830d-fdd227044a24',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'slice.html:1877',message:'After resize update',data:{camAspectAfter:pianoCamera.aspect,camPos:{x:pianoCamera.position.x,y:pianoCamera.position.y,z:pianoCamera.position.z}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                            // #endregion
+                        }
+                    } catch (error) {
+                        console.error('Error resizing piano:', error);
+                    }
+                });
+
+                console.log('3D Piano initialized successfully');
+                
+                // Canvas is now directly on body, no container checks needed
+            } catch (error) {
+                console.error('Error initializing 3D piano:', error);
+            }
+        }
+
+        // Piano key press/release functions
+        function pressPianoKey(midiNote) {
+            const keyData = pianoKeyMap.get(midiNote);
+            if (keyData) {
+                if (keyData.isPressed) {
+                    keyData.mesh.position.y = keyData.originalY;
+                }
+                
+                if (keyData.originalY === undefined) {
+                    keyData.originalY = keyData.mesh.position.y;
+                }
+                
+                if (window.applyKeyHighlight) {
+                    window.applyKeyHighlight(keyData);
+                }
+                
+                const keyHeight = keyData.isBlack ? 0.07 : 0.1;
+                if (window.pressKeyMovement) {
+                    window.pressKeyMovement(keyData, keyHeight, 100);
+                }
+                
+                keyData.isPressed = true;
+            }
+        }
+
+        function releasePianoKey(midiNote) {
+            const keyData = pianoKeyMap.get(midiNote);
+            if (keyData) {
+                if (window.removeKeyHighlight) {
+                    window.removeKeyHighlight(keyData);
+                }
+                
+                const keyHeight = keyData.isBlack ? 0.07 : 0.1;
+                if (window.releaseKeyMovement) {
+                    window.releaseKeyMovement(keyData, keyHeight);
+                } else {
+                    if (keyData.originalY !== undefined) {
+                        keyData.mesh.position.y = keyData.originalY;
+                    }
+                }
+                
+                keyData.isPressed = false;
+            }
+        }
+
+        // Convert MIDI note to frequency
+        function midiNoteToFrequency(midiNote) {
+            return 440 * Math.pow(2, (midiNote - 69) / 12);
+        }
+
+        // Calculate sustain decay time based on note frequency (lower notes decay slower)
+        function calculateSustainDecayTime(midiNote) {
+            const A0_MIDI = 21; // A0 MIDI note number
+            const T0 = 8.0; // Base time for lowest note (8 seconds)
+            const k = 2.5; // Decay factor
+            
+            const semitoneOffset = midiNote - A0_MIDI;
+            const sustainDecayTime = T0 * Math.pow(2, -semitoneOffset / 12 * k);
+            
+            // Clamp to reasonable range: 3s to 25s
+            return Math.max(3.0, Math.min(25.0, sustainDecayTime));
+        }
+        
+        // Start gradual volume decay for a sustained or held note
+        function startSustainDecay(midiNote) {
+            const noteData = activeNoteSources.get(midiNote);
+            if (!noteData) return;
+            
+            const { gainNode } = noteData;
+            const ctx = getAudioContext();
+            
+            // Cancel any existing decay
+            if (sustainDecayAutomations.has(midiNote)) {
+                const automation = sustainDecayAutomations.get(midiNote);
+                if (automation && automation.timeout) {
+                    clearTimeout(automation.timeout);
+                }
+            }
+            
+            // Calculate decay time (longer for lower notes, even longer with pedal)
+            const baseDecayTime = calculateSustainDecayTime(midiNote);
+            const pedalMultiplier = sustainPedalActive ? 2.5 : 1.0;
+            const decayTime = baseDecayTime * pedalMultiplier;
+            
+            const now = ctx.currentTime;
+            const endTime = now + decayTime;
+            
+            // Cancel any scheduled changes
+            gainNode.gain.cancelScheduledValues(now);
+            
+            // Fade from current volume to 0.001 (silent) over decay time
+            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+            gainNode.gain.linearRampToValueAtTime(0.001, endTime);
+            
+            // Schedule note release when volume is effectively silent
+            const releaseTime = endTime - 0.2; // Release 200ms before end
+            const timeout = setTimeout(() => {
+                // Only release if still active and not physically held (unless pedal released)
+                if (activeNoteSources.has(midiNote)) {
+                    if (!physicallyHeldNotes.has(midiNote) && (!sustainPedalActive || !sustainedNotes.has(midiNote))) {
+                        releaseNoteImmediate(midiNote);
+                    }
+                }
+                sustainDecayAutomations.delete(midiNote);
+            }, (releaseTime - now) * 1000);
+            
+            // Store automation info
+            sustainDecayAutomations.set(midiNote, { timeout, startTime: now });
+        }
+        
+        // Release a note with fade-out
+        function releaseNote(midiNote) {
+            // Remove from physically held
+            physicallyHeldNotes.delete(midiNote);
+            
+            // Cancel any sustain decay
+            if (sustainDecayAutomations.has(midiNote)) {
+                const automation = sustainDecayAutomations.get(midiNote);
+                if (automation && automation.timeout) {
+                    clearTimeout(automation.timeout);
+                }
+                sustainDecayAutomations.delete(midiNote);
+            }
+            
+            // If sustain pedal is active, mark as sustained instead of releasing
+            if (sustainPedalActive) {
+                sustainedNotes.add(midiNote);
+                // Start gradual decay for sustained note
+                startSustainDecay(midiNote);
+                // Visual key still releases
+                releasePianoKey(midiNote);
+                return;
+            }
+            
+            // Release immediately with fade-out
+            releaseNoteImmediate(midiNote);
+        }
+        
+        // Release a note immediately with fade-out
+        function releaseNoteImmediate(midiNote) {
+            const noteData = activeNoteSources.get(midiNote);
+            if (!noteData) {
+                // No active source, just release visual key
+                releasePianoKey(midiNote);
+                return;
+            }
+            
+            // Cancel any sustain decay
+            if (sustainDecayAutomations.has(midiNote)) {
+                const automation = sustainDecayAutomations.get(midiNote);
+                if (automation && automation.timeout) {
+                    clearTimeout(automation.timeout);
+                }
+                sustainDecayAutomations.delete(midiNote);
+            }
+            
+            const { source, gainNode } = noteData;
+            const ctx = getAudioContext();
+            
+            // Fade out over release time (300ms)
+            const releaseTime = 0.3;
+            const now = ctx.currentTime;
+            
+            // Cancel any scheduled changes
+            gainNode.gain.cancelScheduledValues(now);
+            
+            // Fade to zero
+            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
+            
+            // Stop source after fade completes
+            try {
+                source.stop(now + releaseTime + 0.1); // Small buffer
+            } catch (e) {
+                // Already stopped, ignore
+            }
+            
+            // Clean up
+            activeNoteSources.delete(midiNote);
+            sustainedNotes.delete(midiNote);
+            physicallyHeldNotes.delete(midiNote);
+            // Don't delete noteRegionIndices - keep it so next press cycles to next region
+            releasePianoKey(midiNote);
+        }
+        
+        // Release all notes (for window blur, etc.)
+        function releaseAllNotes() {
+            // Cancel all sustain decay automations
+            sustainDecayAutomations.forEach((automation, midiNote) => {
+                if (automation && automation.timeout) {
+                    clearTimeout(automation.timeout);
+                }
+            });
+            sustainDecayAutomations.clear();
+            
+            // Release all active notes
+            const notesToRelease = Array.from(activeNoteSources.keys());
+            notesToRelease.forEach(midiNote => {
+                releaseNoteImmediate(midiNote);
+            });
+            
+            // Clear all tracking
+            activeNoteSources.clear();
+            sustainedNotes.clear();
+            physicallyHeldNotes.clear();
+            
+            console.log('All notes released');
+        }
+        
+        // Play note using Play Anote mechanism with pitch adjustment
+        async function playNoteFromPiano(midiNote, velocity = 100) {
+            if (regions.length === 0) {
+                console.log('No regions available');
+                return;
+            }
+
+            // Ensure piano is still visible (canvas is now directly on body, no container needed)
+
+            // Check if note is already playing - if so, release it first
+            if (activeNoteSources.has(midiNote)) {
+                releaseNoteImmediate(midiNote);
+            }
+            
+            // Cycle through regions - each note has its own region index
+            let noteRegionIndex = noteRegionIndices.get(midiNote);
+            if (noteRegionIndex === undefined) {
+                // First time playing this note - use global index
+                noteRegionIndex = currentPianoRegionIndex;
+                currentPianoRegionIndex = (currentPianoRegionIndex + 1) % regions.length;
+            } else {
+                // Cycle to next region for this specific note
+                noteRegionIndex = (noteRegionIndex + 1) % regions.length;
+            }
+            noteRegionIndices.set(midiNote, noteRegionIndex);
+            const regionIndex = noteRegionIndex;
+
+            const selectedRegion = regions[regionIndex];
+            const targetFrequency = midiNoteToFrequency(midiNote);
+
+            try {
+                const ctx = getAudioContext();
+                if (ctx.state === 'suspended') {
+                    await ctx.resume();
+                }
+
+                const sampleRate = audioBuffer.sampleRate;
+                const regionStartSample = Math.floor(selectedRegion.startTime * sampleRate);
+                const regionEndSample = Math.floor(selectedRegion.endTime * sampleRate);
+                const regionLength = regionEndSample - regionStartSample;
+
+                if (regionLength < 512) {
+                    console.log('Region too short');
+                    return;
+                }
+
+                const regionData = audioData.subarray(regionStartSample, regionEndSample);
+                
+                // Get original note from region, or detect pitch if not available
+                let originalFrequency = null;
+                
+                if (selectedRegion && selectedRegion.note) {
+                    originalFrequency = noteNameToFrequency(selectedRegion.note);
+                } else {
+                    const detectedPitch = detectPitchFast(regionData, sampleRate);
+                    if (detectedPitch && detectedPitch > 50 && detectedPitch < 2000) {
+                        originalFrequency = detectedPitch;
+                    }
+                }
+                
+                // Create buffer from region for looping
+                const targetDuration = 1.0;
+                const targetLength = Math.floor(sampleRate * targetDuration);
+                const buffer = ctx.createBuffer(1, targetLength, sampleRate);
+                const outputData = buffer.getChannelData(0);
+                
+                // Fill buffer with looped region data
+                for (let i = 0; i < targetLength; i++) {
+                    const sourceIndex = i % regionLength;
+                    outputData[i] = regionData[sourceIndex];
+                }
+
+                // Simple fade in at start to prevent clicks (no crossfade at end - let natural loop handle it)
+                const fadeSamples = Math.floor(sampleRate * 0.01); // 10ms fade in
+                for (let i = 0; i < fadeSamples && i < targetLength; i++) {
+                    const fade = i / fadeSamples;
+                    outputData[i] *= fade;
+                }
+
+                // Create source and enable looping
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.loop = true; // Enable looping for sustained playback
+                source.loopStart = 0;
+                source.loopEnd = buffer.duration;
+                
+                // Create gain node for volume control and release fade
+                const gainNode = ctx.createGain();
+                gainNode.gain.value = 1.0;
+                
+                // Adjust pitch
+                if (originalFrequency && originalFrequency > 50 && originalFrequency < 2000) {
+                    const playbackRate = targetFrequency / originalFrequency;
+                    source.playbackRate.value = playbackRate;
+                }
+                
+                // Connect: source -> gainNode -> destination
+                source.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                // Start playing
+                source.start(0);
+                
+                // Mark as physically held
+                physicallyHeldNotes.add(midiNote);
+                
+                // Track this note with region index
+                activeNoteSources.set(midiNote, { source, gainNode, buffer, regionIndex });
+                
+                // Start gradual decay (even when held, notes fade out slowly like real piano)
+                startSustainDecay(midiNote);
+                
+                // Visual feedback
+                pressPianoKey(midiNote);
+                
+                // Clean up when source ends (shouldn't happen with looping, but safety)
+                source.onended = () => {
+                    activeNoteSources.delete(midiNote);
+                    releasePianoKey(midiNote);
+                };
+                
+            } catch (error) {
+                console.error('Error playing note:', error);
+                releasePianoKey(midiNote);
+            }
+        }
+
+        // Initialize MIDI and keyboard input
+        function initializePianoInput() {
+            // MIDI input - requires user gesture for permission
+            if (window.initMidiInput) {
+                try {
+                    window.initMidiInput(
+                        (midiNote, velocity) => {
+                            playNoteFromPiano(midiNote, velocity);
+                        },
+                        (midiNote) => {
+                            releaseNote(midiNote);
+                        },
+                        (controller, value) => {
+                            // Handle sustain pedal (controller 64)
+                            if (controller === 64) {
+                                const wasActive = sustainPedalActive;
+                                sustainPedalActive = value >= 64; // >= 64 means pedal down
+                                
+                                // If pedal released, release all sustained notes
+                                if (wasActive && !sustainPedalActive) {
+                                    const notesToRelease = Array.from(sustainedNotes);
+                                    notesToRelease.forEach(midiNote => {
+                                        releaseNoteImmediate(midiNote);
+                                    });
+                                } else if (sustainPedalActive) {
+                                    // Pedal pressed - restart decay for all active notes with longer time
+                                    activeNoteSources.forEach((noteData, midiNote) => {
+                                        if (!physicallyHeldNotes.has(midiNote)) {
+                                            startSustainDecay(midiNote);
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    );
+                    console.log('MIDI input initialized');
+                } catch (error) {
+                    console.warn('Failed to initialize MIDI input:', error);
+                }
+            } else {
+                console.warn('initMidiInput function not available');
+            }
+
+            // Keyboard input - doesn't require permission
+            if (window.initKeypressInput) {
+                try {
+                    window.initKeypressInput(
+                        (midiNote, velocity) => {
+                            playNoteFromPiano(midiNote, velocity);
+                        },
+                        (midiNote) => {
+                            releaseNote(midiNote);
+                        }
+                    );
+                    console.log('Keyboard input initialized');
+                } catch (error) {
+                    console.warn('Failed to initialize keyboard input:', error);
+                }
+            } else {
+                console.warn('initKeypressInput function not available');
+            }
+            
+            // Handle window blur to release all notes (prevents ghost notes)
+            window.addEventListener('blur', () => {
+                releaseAllNotes();
+            });
+        }
+
+        // Track if piano is initialized
+        let pianoInitialized = false;
+        let pianoInputInitialized = false;
+
+        // Initialize 3D piano after audio loads
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Wait a bit for modules to load
+            setTimeout(async () => {
+                if (!pianoInitialized) {
+                    await initialize3DPiano();
+                    pianoInitialized = true;
+                }
+            }, 1000);
+        });
+
+        // Initialize MIDI input on user interaction (required for permission)
+        function initializePianoInputOnUserInteraction() {
+            if (pianoInputInitialized) return;
+            
+            initializePianoInput();
+            pianoInputInitialized = true;
+        }
+
+        // Request MIDI permission on first user click
+        document.addEventListener('click', initializePianoInputOnUserInteraction, { once: true });
+        
+        // Also try on keypress (for keyboard input)
+        document.addEventListener('keydown', initializePianoInputOnUserInteraction, { once: true });
+        
+        // Keyboard shortcut to release all stuck notes (press 'R' key) - like primid_v1_06
+        window.addEventListener('keydown', (event) => {
+            // Press 'R' to release all notes (useful if notes get stuck)
+            if (event.key === 'r' || event.key === 'R') {
+                releaseAllNotes();
+                console.log('Released all notes (keyboard shortcut)');
+            }
+            
+            // Press 'C' to log camera position
+            if (event.key === 'c' || event.key === 'C') {
+                if (pianoCamera && pianoControls) {
+                    const cameraPos = pianoCamera.position;
+                    const cameraRot = pianoCamera.rotation;
+                    const target = pianoControls.target;
+                    console.log('📷 Camera Position:', {
+                        position: {
+                            x: cameraPos.x.toFixed(3),
+                            y: cameraPos.y.toFixed(3),
+                            z: cameraPos.z.toFixed(3)
+                        },
+                        rotation: {
+                            x: cameraRot.x.toFixed(3),
+                            y: cameraRot.y.toFixed(3),
+                            z: cameraRot.z.toFixed(3)
+                        },
+                        target: {
+                            x: target.x.toFixed(3),
+                            y: target.y.toFixed(3),
+                            z: target.z.toFixed(3)
+                        }
+                    });
+                } else {
+                    console.log('Camera not initialized yet');
+                }
+            }
+        });
+
+        // Region dragging state
+        let isDragging = false;
+        let dragRegionIndex = -1;
+        let dragType = null; // 'start' or 'end'
+        let dragStartX = 0;
+        let dragStartTime = 0;
+
+        // Click on waveform to select region (double-click to play Anote)
+        let lastClickTime = 0;
+        let lastClickIndex = -1;
+        canvas.addEventListener('click', (e) => {
+            if (!audioBuffer || regions.length === 0) return;
+            if (isDragging) return; // Don't trigger click if we were dragging
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const duration = audioBuffer.duration;
+            const clickTime = (x / canvas.width) * duration;
+            const pixelThreshold = 10; // Same threshold as drag detection
+
+            // Check if clicking near a boundary of selected region (don't select if near boundary)
+            if (selectedRegionIndex >= 0 && selectedRegionIndex < regions.length) {
+                const region = regions[selectedRegionIndex];
+                const startX = (region.startTime / duration) * canvas.width;
+                const endX = (region.endTime / duration) * canvas.width;
+                const distToStart = Math.abs(x - startX);
+                const distToEnd = Math.abs(x - endX);
+                
+                if (distToStart < pixelThreshold || distToEnd < pixelThreshold) {
+                    // Clicked near boundary - don't select, allow drag
+                    return;
+                }
+            }
+            
+            // Find which region was clicked
+            for (let i = 0; i < regions.length; i++) {
+                const region = regions[i];
+                if (clickTime >= region.startTime && clickTime <= region.endTime) {
+                    const currentTime = Date.now();
+                    // Check for double-click
+                    if (currentTime - lastClickTime < 300 && lastClickIndex === i) {
+                        // Double-click - play Anote
+                        playAnoteWithHarmonics(i);
+                        lastClickTime = 0;
+                        lastClickIndex = -1;
+                    } else {
+                        // Single click - select region
+                        selectRegion(i);
+                        lastClickTime = currentTime;
+                        lastClickIndex = i;
+                    }
+                    break;
+                }
+            }
+        });
+
+        // Mouse down - start dragging region boundaries
+        canvas.addEventListener('mousedown', (e) => {
+            if (!audioBuffer || regions.length === 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const duration = audioBuffer.duration;
+            const clickTime = (x / canvas.width) * duration;
+
+            // Only allow dragging boundaries of selected region
+            if (selectedRegionIndex >= 0 && selectedRegionIndex < regions.length) {
+                const region = regions[selectedRegionIndex];
+                const startX = (region.startTime / duration) * canvas.width;
+                const endX = (region.endTime / duration) * canvas.width;
+                const pixelThreshold = 10; // 10 pixels threshold
+                
+                const distToStart = Math.abs(x - startX);
+                const distToEnd = Math.abs(x - endX);
+                
+                if (distToStart < pixelThreshold) {
+                    isDragging = true;
+                    dragRegionIndex = selectedRegionIndex;
+                    dragType = 'start';
+                    dragStartX = x;
+                    dragStartTime = region.startTime;
+                    canvas.style.cursor = 'ew-resize';
+                    e.preventDefault();
+                    return;
+                } else if (distToEnd < pixelThreshold) {
+                    isDragging = true;
+                    dragRegionIndex = selectedRegionIndex;
+                    dragType = 'end';
+                    dragStartX = x;
+                    dragStartTime = region.endTime;
+                    canvas.style.cursor = 'ew-resize';
+                    e.preventDefault();
+                    return;
+                }
+            }
+        });
+
+        // Mouse move - update region boundary while dragging
+        canvas.addEventListener('mousemove', (e) => {
+            if (!audioBuffer || regions.length === 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const duration = audioBuffer.duration;
+            const clickTime = (x / canvas.width) * duration;
+
+            if (isDragging && dragRegionIndex >= 0) {
+                const region = regions[dragRegionIndex];
+                const minDuration = 1.0;
+                const maxDuration = 2.0;
+
+                if (dragType === 'start') {
+                    // Adjust start time
+                    let newStartTime = Math.max(0, Math.min(clickTime, region.endTime - minDuration));
+                    // Ensure minimum duration
+                    if (region.endTime - newStartTime < minDuration) {
+                        newStartTime = region.endTime - minDuration;
+                    }
+                    // Ensure doesn't overlap with previous region
+                    if (dragRegionIndex > 0) {
+                        const prevRegion = regions[dragRegionIndex - 1];
+                        newStartTime = Math.max(newStartTime, prevRegion.endTime);
+                    }
+                    region.startTime = newStartTime;
+                } else if (dragType === 'end') {
+                    // Adjust end time
+                    let newEndTime = Math.min(duration, Math.max(clickTime, region.startTime + minDuration));
+                    // Ensure minimum duration
+                    if (newEndTime - region.startTime < minDuration) {
+                        newEndTime = region.startTime + minDuration;
+                    }
+                    // Ensure doesn't exceed max duration
+                    if (newEndTime - region.startTime > maxDuration) {
+                        newEndTime = region.startTime + maxDuration;
+                    }
+                    // Ensure doesn't overlap with next region
+                    if (dragRegionIndex < regions.length - 1) {
+                        const nextRegion = regions[dragRegionIndex + 1];
+                        newEndTime = Math.min(newEndTime, nextRegion.startTime);
+                    }
+                    region.endTime = newEndTime;
+                }
+
+                drawWaveform();
+                updateRegionInfo();
+            } else {
+                // Show resize cursor when near boundaries of selected region
+                let nearBoundary = false;
+                const pixelThreshold = 10; // 10 pixels threshold for easier targeting
+                
+                if (selectedRegionIndex >= 0 && selectedRegionIndex < regions.length) {
+                    const region = regions[selectedRegionIndex];
+                    const startX = (region.startTime / duration) * canvas.width;
+                    const endX = (region.endTime / duration) * canvas.width;
+                    
+                    // Check if mouse is near left or right boundary (within pixel threshold)
+                    const distToStart = Math.abs(x - startX);
+                    const distToEnd = Math.abs(x - endX);
+                    
+                    if (distToStart < pixelThreshold || distToEnd < pixelThreshold) {
+                        nearBoundary = true;
+                    }
+                }
+                
+                canvas.style.cursor = nearBoundary ? 'ew-resize' : 'pointer';
+            }
+        });
+
+        // Mouse up - stop dragging
+        canvas.addEventListener('mouseup', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                dragRegionIndex = -1;
+                dragType = null;
+                canvas.style.cursor = 'pointer';
+            }
+        });
+
+        // Mouse leave - stop dragging
+        canvas.addEventListener('mouseleave', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                dragRegionIndex = -1;
+                dragType = null;
+                canvas.style.cursor = 'pointer';
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Delete key - delete selected region
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedRegionIndex >= 0 && selectedRegionIndex < regions.length) {
+                    e.preventDefault();
+                    deleteRegion(selectedRegionIndex);
+                }
+            }
+            // Escape - deselect
+            if (e.key === 'Escape') {
+                selectedRegionIndex = -1;
+                updateRegionInfo();
+            }
+            // Arrow keys - navigate selection
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                if (regions.length > 0) {
+                    e.preventDefault();
+                    if (selectedRegionIndex < 0) {
+                        selectedRegionIndex = 0;
+                    } else {
+                        if (e.key === 'ArrowUp') {
+                            selectedRegionIndex = Math.max(0, selectedRegionIndex - 1);
+                        } else {
+                            selectedRegionIndex = Math.min(regions.length - 1, selectedRegionIndex + 1);
+                        }
+                    }
+                    drawWaveform(); // Redraw to show selection border
+                    updateRegionInfo();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

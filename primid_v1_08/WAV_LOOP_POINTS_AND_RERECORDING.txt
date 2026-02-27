@@ -1,0 +1,130 @@
+================================================================================
+  Piano Calm (v1_09) – WAV loop points and re-recording guide
+================================================================================
+
+This explains what the engine expects from zone WAVs and how to set loop points
+when you re-record or edit your own samples.
+
+--------------------------------------------------------------------------------
+1. What the engine expects (from the code)
+--------------------------------------------------------------------------------
+
+For each zone the engine uses:
+
+  • File path
+    e.g. piano_calm_wavs/zone_0_midi0_keys_0-34.wav
+
+  • Key range
+    keyLow / keyHigh (MIDI 0–34, 35–41, etc.)
+
+  • originalPitchCents
+    The pitch of the RECORDED note in cents (e.g. 3100 = 31.00 semitones).
+    The engine pitch-shifts from this to cover the whole zone.
+
+  • loopStart / loopEnd
+    Time in SECONDS from the start of the WAV file where the sustain portion
+    should loop (the seamless loop region).
+
+When you re-record, you need to keep (or adjust) the same zone layout and file
+names, and set loop points in seconds for each new WAV in the code.
+
+--------------------------------------------------------------------------------
+2. What to pay attention to when recording
+--------------------------------------------------------------------------------
+
+  • One note per zone (or one “representative” note per zone) is enough; the
+    engine pitch-shifts via playbackRate.
+
+  • Length: record long enough that there’s a clear attack → decay → sustain.
+    The loop will sit in the sustain part.
+
+  • Sample rate: any rate is fine (44.1 kHz, 48 kHz, etc.). Loop points are in
+    SECONDS, so they’re independent of sample rate.
+
+  • Stable sustain: the part you’ll loop should be as steady as possible (no
+    big vibrato or level drift), so the loop doesn’t sound like a repeat.
+
+--------------------------------------------------------------------------------
+3. How to choose and set loop points in your WAV editor
+--------------------------------------------------------------------------------
+
+Goal: a short segment in the SUSTAIN that can repeat without a click or
+obvious “jump”.
+
+Steps:
+
+  1. Open the WAV in your editor (Audacity, Reaper, Adobe Audition, etc.).
+
+  2. Find the sustain – after the attack and initial decay, where the tone is
+     relatively even.
+
+  3. Pick a short loop – often 50–200 ms (e.g. 0.05–0.2 s). Too short can
+     sound mechanical; too long can be hard to make seamless.
+
+  4. Set start/end so the loop is seamless:
+     • Zero-crossing method: put loop START and loop END at a zero crossing
+       (waveform crosses the zero line). That reduces clicks.
+     • Match shape: zoom in and try to start and end at a similar point in
+       the waveform cycle so the end “continues” into the start.
+
+  5. Read times in SECONDS from the start of the file (e.g. “Loop starts at
+     1.325 s, ends at 1.462 s”).
+
+  6. Put those into the code as loopStart and loopEnd for that zone (in
+     seconds).
+
+In the editor:
+  • Enable “Snap to zero crossing” if available (Audacity: Edit → Preferences
+    → Editing).
+  • Use the selection/length display to get start time and end time in seconds;
+    those are your loopStart and loopEnd.
+
+--------------------------------------------------------------------------------
+4. Updating the code after you have new WAVs
+--------------------------------------------------------------------------------
+
+Edit: primid_v1_09/audio/piano-calm-engine.js
+
+Find the array PIANO_ZONES. For each zone, set:
+
+  • file          – path to your new WAV (same naming if you’re drop-in
+                    replacing).
+  • originalPitchCents – pitch of the note you actually recorded.
+                    For MIDI note N: originalPitchCents = N * 100
+                    (e.g. MIDI 31 → 3100, MIDI 69 → 6900).
+  • loopStart     – start of the loop region in SECONDS (from 0 = start of
+                    file).
+  • loopEnd       – end of the loop region in SECONDS.
+
+Example for zone 3 (keys 48–52) with a new file and new loop:
+
+  { keyLow: 48, keyHigh: 52, originalPitchCents: 5000,
+    file: 'piano_calm_wavs/zone_3_midi0_keys_48-52.wav',
+    loopStart: 1.20, loopEnd: 1.35 }
+
+If you change the number of zones or key ranges, you have to edit the whole
+PIANO_ZONES array and keep keyLow/keyHigh consistent and non-overlapping.
+
+--------------------------------------------------------------------------------
+5. Quick checklist for re-recorded WAVs
+--------------------------------------------------------------------------------
+
+  Zone layout      Same 11 zones and key ranges, or update the whole
+                   PIANO_ZONES array.
+
+  File names       Match the file paths in the code (or change the code to
+                   match your names).
+
+  Original pitch   Set originalPitchCents = MIDI_note * 100 for the note you
+                   recorded.
+
+  Loop region      Choose a stable sustain segment; start/end at zero
+                   crossings (or matching waveform).
+
+  Loop times       Measure in SECONDS from the start of the file; set
+                   loopStart and loopEnd in the code.
+
+  Seamless loop    No click at loop end → zero-crossings and similar
+                   waveform phase at start/end.
+
+================================================================================

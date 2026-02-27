@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>PriMIDI</title>
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amarante&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; min-height: 100%; }
+        body {
+            margin: 0;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at center, #0d2528 0%, #0a1a1c 50%, #0a0a0f 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+        .overlay {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 24px 40px;
+            text-align: center;
+        }
+        .overlay h1 {
+            margin: 0;
+            font-family: 'Amarante', serif;
+            font-weight: 400;
+            font-size: clamp(2.5rem, 12vw, 56px);
+            color: #ffffff;
+            letter-spacing: 2px;
+            line-height: 1.2;
+            transition: opacity 0.2s ease;
+        }
+        .overlay h1 a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .overlay h1 a:hover { opacity: 0.85; }
+        .overlay h1 a:focus {
+            outline: none;
+            opacity: 0.9;
+        }
+        .overlay .subtitle {
+            margin: 12px 0 0 0;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            line-height: 1.8;
+            max-width: 600px;
+        }
+        .overlay .subtitle a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .overlay .subtitle a:hover { color: rgba(255, 255, 255, 0.9); }
+        .overlay .preset-section {
+            margin-top: 28px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .launch-button {
+            padding: 16px 36px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.2s, border-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 52px;
+            min-width: 140px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .launch-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .launch-button:focus {
+            outline: none;
+            border-color: #1a5a3a;
+        }
+        .overlay .developer-credits {
+            margin-top: 40px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            line-height: 1.6;
+        }
+        .overlay .developer-credits a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .overlay .developer-credits a:hover { color: rgba(255, 255, 255, 0.9); }
+        .overlay .developer-credits .beats-away-link { color: rgba(255, 255, 255, 0.8); }
+        .overlay .developer-credits .beats-away-link:hover { color: #fff; }
+        @media (max-width: 480px) {
+            .overlay { padding: 20px 16px 32px; }
+            .overlay .preset-section { margin-top: 24px; gap: 14px; }
+            .launch-button { padding: 14px 28px; font-size: 16px; min-height: 48px; min-width: 120px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <h1><a href="primid_v1_06/index.html">PriMIDI</a></h1>
+        <p class="subtitle">
+            Premium MIDI synthesiser (free to use). Piano, guitar &amp; synths.
+        </p>
+        <div class="preset-section">
+            <a href="primid_v1_06/index.html" class="launch-button">v1.06</a>
+            <a href="primid_v1_08/index.html" class="launch-button">v1.08</a>
+            <a href="primid_v1_09/index.html" class="launch-button">v1.09</a>
+        </div>
+        <p class="developer-credits">
+            Developed by <a href="https://youtube.com/beatsaway" target="_blank" rel="noopener noreferrer" class="beats-away-link">Beats Away</a>.<br>
+            <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Support this developer</a>.
+        </p>
+    </div>
+</body>
+</html>
