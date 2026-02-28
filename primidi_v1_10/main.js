@@ -5,11 +5,12 @@ import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/exampl
 // Make THREE available globally for modules that need it (like key-highlight.js)
 if (typeof window !== 'undefined') {
     window.THREE = THREE;
+    window.pianoBrightness = 0.01; // 1% at start; ramp 1%→100% over 4s then slider
 }
 
 // Create scene
 const scene = new THREE.Scene();
-scene.background = null; // Transparent so body's teal gradient shows through
+scene.background = null; // Transparent so body gradient shows through
 
 // Create camera - top view to see all keys clearly
 const camera = new THREE.PerspectiveCamera(
@@ -55,21 +56,21 @@ controls.target.set(0, 0, 0);
 controls.update();
 
 
-// White key material - ivory/white for light mode
+// White key material - ivory/white for light mode (brightness via scene lights only)
 const whiteKeyMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xeeefee, // Whiter ivory tone
-    metalness: 0.0, // Piano keys are not metallic
-    roughness: 0.3, // Smooth, polished surface
-    clearcoat: 0.5, // Subtle glossy finish
+    color: 0xeeefee,
+    metalness: 0.0,
+    roughness: 0.3,
+    clearcoat: 0.5,
     clearcoatRoughness: 0.2,
     reflectivity: 0.5
 });
 
-// Black key material - grey color
+// Black key material - grey
 const blackKeyMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x404040, // Darker grey for better highlight contrast
+    color: 0x404040,
     metalness: 0.0,
-    roughness: 0.4, // Slightly rougher than white keys
+    roughness: 0.4,
     clearcoat: 0.3,
     clearcoatRoughness: 0.3,
     reflectivity: 0.3
@@ -587,12 +588,16 @@ window.updateBlackKeyLabelsFromMain = function(mode) {
 // Initialize key highlight module now that THREE.js is available
 initializeKeyHighlightDeferred();
 
-// Improved lighting setup
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+// Improved lighting setup — start dim and ramp to target for premium load effect
+const LIGHT_RAMP_DURATION = 1.25; // seconds, match bg-reveal transition
+const PIANO_BRIGHTNESS_RAMP_DURATION = 4; // seconds: 1% → 100% (no hold)
+const PIANO_BRIGHTNESS_START = 0.01;      // 1%
+const ambientLight = new THREE.AmbientLight(0xffffff, 0);
 scene.add(ambientLight);
+const ambientLightTarget = 0.4;
 
 // Main directional light with shadows
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0);
 directionalLight.position.set(5, 8, 5);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.width = 2048;
@@ -605,16 +610,22 @@ directionalLight.shadow.camera.top = 10;
 directionalLight.shadow.camera.bottom = -10;
 directionalLight.shadow.bias = -0.0001;
 scene.add(directionalLight);
+const directionalLightTarget = 1.0;
 
 // Fill light from the opposite side for better depth
-const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+const fillLight = new THREE.DirectionalLight(0xffffff, 0);
 fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
+const fillLightTarget = 0.3;
 
 // Rim light for edge definition
-const rimLight = new THREE.PointLight(0xffffff, 0.5, 15);
+const rimLight = new THREE.PointLight(0xffffff, 0, 15);
 rimLight.position.set(0, 5, -8);
 scene.add(rimLight);
+const rimLightTarget = 0.5;
+
+let loadRevealStartTime = null;
+let pianoBrightnessRampDone = false;
 
 // Ground plane removed - piano now floats in space
 
@@ -643,6 +654,26 @@ function animate() {
     const now = performance.now();
     const deltaSec = (now - lastAnimateTime) / 1000;
     lastAnimateTime = now;
+
+    // Piano brightness: 1% → 100% over 4s, then slider
+    if (loadRevealStartTime === null) loadRevealStartTime = now;
+    const elapsed = (now - loadRevealStartTime) / 1000;
+    let lightScale;
+    if (elapsed < PIANO_BRIGHTNESS_RAMP_DURATION) {
+        const t = elapsed / PIANO_BRIGHTNESS_RAMP_DURATION;
+        const tEased = 1 - Math.pow(1 - t, 1.4);
+        lightScale = PIANO_BRIGHTNESS_START + (1 - PIANO_BRIGHTNESS_START) * tEased;
+    } else {
+        if (!pianoBrightnessRampDone) {
+            pianoBrightnessRampDone = true;
+            window.pianoBrightness = 1; // stay at 100% after ramp; slider controls from here
+        }
+        lightScale = (typeof window.pianoBrightness === 'number') ? window.pianoBrightness : 1;
+    }
+    ambientLight.intensity = ambientLightTarget * lightScale;
+    directionalLight.intensity = directionalLightTarget * lightScale;
+    fillLight.intensity = fillLightTarget * lightScale;
+    rimLight.intensity = rimLightTarget * lightScale;
 
     // Idle orbit: slow rotation around current target (works from any view when toggled ON)
     if (window.cameraIdleOrbit && window.cameraIdleOrbit.active && window.camera && window.controls) {
@@ -2253,8 +2284,18 @@ function updateUIAfterPreset() {
     if (enableRealisticSustain) enableRealisticSustain.checked = window.physicsSettings.realisticSustain;
 }
 
+// Apply piano brightness (scene lights only; slider + open-settings sync)
+function applyPianoBrightness() {
+    const scale = (typeof window.pianoBrightness === 'number') ? window.pianoBrightness : 1;
+    ambientLight.intensity = ambientLightTarget * scale;
+    directionalLight.intensity = directionalLightTarget * scale;
+    fillLight.intensity = fillLightTarget * scale;
+    rimLight.intensity = rimLightTarget * scale;
+}
+
 // Export functions globally - at end of file after all functions are defined
 if (typeof window !== 'undefined') {
+    window.applyPianoBrightness = applyPianoBrightness;
     window.applySoundPreset = applySoundPreset;
     window.populateGslPresetDropdown = populateGslPresetDropdown;
     window.soundPresets = soundPresets;

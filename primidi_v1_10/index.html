@@ -8,7 +8,7 @@
     <link rel="icon" href="data:,">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Amarante&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amarante&display=swap" rel="stylesheet" id="font-amarante">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
@@ -29,8 +29,8 @@
             --surface:      #fafafa;
             --surface-text: #2c2c2c;
             --surface-text-secondary: #737373;
-            --accent:       #0d7a6b;
-            --accent-hover: #0a6357;
+            --accent:       #1e3a5f;
+            --accent-hover: #152a47;
             --modal-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
             --overlay-scrim: rgba(0, 0, 0, 0.28);
             --hairline:     rgba(0, 0, 0, 0.06);
@@ -53,13 +53,26 @@
             background: radial-gradient(ellipse 100% 85% at 50% 45%, var(--bg-center) 0%, var(--bg-mid) 38%, var(--bg-edge) 100%);
             color: var(--surface-text);
         }
+        /* Full-screen dark overlay: glow in to normal over 4s (no hold) */
+        .bg-reveal {
+            position: fixed;
+            inset: 0;
+            background: #151518;
+            z-index: 0;
+            opacity: 1;
+            transition: opacity 4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            pointer-events: none;
+        }
+        .bg-reveal.revealed {
+            opacity: 0;
+        }
         canvas {
             position: fixed;
             inset: 0;
             width: 100vw;
             height: 100vh;
             display: block;
-            z-index: 0;
+            z-index: 1;
         }
 
         .overlay {
@@ -130,14 +143,19 @@
         .app-logo {
             margin: 0;
             font-family: "Amarante", serif;
-            font-size: 2rem;
+            font-size: 3.75rem;
             font-weight: 400;
             color: var(--accent);
             letter-spacing: 0.04em;
             cursor: pointer;
             user-select: none;
-            transition: color 0.2s ease;
+            transition: color 0.2s ease, opacity 0.2s ease;
             text-align: center;
+            /* Hidden until Amarante is loaded to avoid font flash (FOUT) */
+            opacity: 0;
+        }
+        .app-logo.font-loaded {
+            opacity: 1;
         }
         .app-logo:hover { color: var(--header-text); }
         .app-logo .sc { font-variant: small-caps; }
@@ -337,6 +355,7 @@
         .keyboard-visual-setting-item select:focus { outline: none; border-color: var(--accent); }
         .keyboard-visual-setting-item input[type="range"] { flex: 1; min-width: 0; }
         .settings-master-volume-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--surface-text-secondary); }
+        .settings-piano-brightness-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--surface-text-secondary); }
 
         /* MIDI Debug — Muji-style panel */
         #midi-debug-container {
@@ -375,7 +394,7 @@
             font-size: 0.7rem;
             color: var(--surface-text-secondary);
         }
-        .midi-debug-pedal.on { background: rgba(13, 122, 107, 0.08); color: var(--accent); border-color: rgba(13, 122, 107, 0.2); }
+        .midi-debug-pedal.on { background: rgba(30, 58, 95, 0.08); color: var(--accent); border-color: rgba(30, 58, 95, 0.2); }
         .midi-debug-empty { color: var(--surface-text-secondary); font-style: italic; font-size: 0.7rem; }
         .midi-debug-note {
             padding: 0.55rem 0.65rem;
@@ -481,6 +500,7 @@
     </style>
 </head>
 <body>
+    <div class="bg-reveal" id="bg-reveal" aria-hidden="true"></div>
     <div class="overlay">
         <header class="header">
             <h1 class="app-logo" id="app-logo">Pri<span class="sc">midi</span></h1>
@@ -518,13 +538,29 @@
     <script>
         // Initialize keyboard visual settings when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
+            // Scene: glow in from dark to normal over 4s (no hold)
+            requestAnimationFrame(() => {
+                const bgReveal = document.getElementById('bg-reveal');
+                if (bgReveal) bgReveal.classList.add('revealed');
+            });
+            // Show app logo only after Amarante font is loaded to avoid FOUT (flash of wrong font)
+            const appLogo = document.getElementById('app-logo');
+            if (appLogo && document.fonts && document.fonts.load) {
+                document.fonts.load('1em Amarante').then(() => {
+                    appLogo.classList.add('font-loaded');
+                }).catch(() => {
+                    appLogo.classList.add('font-loaded');
+                });
+                setTimeout(() => { appLogo.classList.add('font-loaded'); }, 2500);
+            } else if (appLogo) {
+                appLogo.classList.add('font-loaded');
+            }
             // Initialize keyboard visual settings module
             if (window.initKeyboardVisualSettings) {
                 window.initKeyboardVisualSettings();
             }
             
             // PriMIDI logo: click toggles rest of header (preset, Settings)
-            const appLogo = document.getElementById('app-logo');
             const headerRest = document.getElementById('header-rest');
             if (appLogo && headerRest) {
                 appLogo.addEventListener('click', () => headerRest.classList.toggle('visible'));

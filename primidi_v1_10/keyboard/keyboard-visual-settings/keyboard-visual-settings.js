@@ -59,6 +59,14 @@
                     </label>
                 </div>
                 <div class="keyboard-visual-setting-item">
+                    <label class="keyboard-visual-setting-row">
+                        <span class="setting-label-inline">Piano brightness</span>
+                        <input type="range" id="settings-piano-brightness" min="0" max="100" value="100" step="1" style="flex:1; min-width:80px;">
+                        <span class="settings-piano-brightness-value" id="settings-piano-brightness-value">100%</span>
+                    </label>
+                    <div class="setting-description" style="margin-top:4px;">Dark ← → Normal (key material only)</div>
+                </div>
+                <div class="keyboard-visual-setting-item">
                     <label>
                         <input type="checkbox" id="enable-key-movement" checked>
                         <div>
@@ -223,6 +231,21 @@
                 if (e.target === settingsModal) {
                     settingsModal.style.display = 'none';
                     settingsModal.classList.remove('active');
+                }
+            });
+        }
+        
+        // Piano brightness slider (how dark the piano keys look)
+        window.pianoBrightness = window.pianoBrightness !== undefined ? window.pianoBrightness : 1;
+        const pianoBrightnessSlider = document.getElementById('settings-piano-brightness');
+        const pianoBrightnessValue = document.getElementById('settings-piano-brightness-value');
+        if (pianoBrightnessSlider && pianoBrightnessValue) {
+            pianoBrightnessSlider.addEventListener('input', function () {
+                const v = Math.max(0, Math.min(100, parseInt(this.value, 10) || 100));
+                window.pianoBrightness = v / 100;
+                pianoBrightnessValue.textContent = v + '%';
+                if (typeof window.applyPianoBrightness === 'function') {
+                    window.applyPianoBrightness();
                 }
             });
         }
@@ -687,6 +710,17 @@
         const midiInputCheckbox = document.getElementById('enable-midi-input');
         const keypressInputCheckbox = document.getElementById('enable-keypress-input');
         const midiDebugCheckbox = document.getElementById('enable-midi-debug');
+        
+        const pianoBrightnessSlider = document.getElementById('settings-piano-brightness');
+        const pianoBrightnessValueEl = document.getElementById('settings-piano-brightness-value');
+        if (pianoBrightnessSlider && pianoBrightnessValueEl) {
+            const v = Math.round((window.pianoBrightness !== undefined ? window.pianoBrightness : 1) * 100);
+            pianoBrightnessSlider.value = v;
+            pianoBrightnessValueEl.textContent = v + '%';
+            if (typeof window.applyPianoBrightness === 'function') {
+                window.applyPianoBrightness();
+            }
+        }
         
         if (highlightCheckbox) {
             highlightCheckbox.checked = window.keyHighlightSettings.enabled;
