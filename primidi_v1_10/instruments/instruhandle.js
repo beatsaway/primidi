@@ -25,7 +25,7 @@
   var SAMPLE_ENVELOPE = { attack: 0.02, decay: 0.15, sustain: 0.6, release: 0.3 };
 
   function ensureGslManifest() {
-    if (gslManifest) return Promise.resolve();
+    if (gslManifest) return Promise.resolve(gslManifest);
     var base = (typeof document !== 'undefined' && document.baseURI) ? document.baseURI.replace(/\/[^/]*$/, '/') : '';
     var url = base + GSL_MANIFEST_URL + '?v=2';
     return fetch(url).then(function (r) {

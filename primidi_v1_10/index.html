@@ -15,9 +15,9 @@
         /* — Light mode palette (coherent across page) — */
         :root {
             /* Scene / page: soft light gradient, stronger falloff with darker outer ring */
-            --bg-center:     #d2d5d4;
-            --bg-mid:        #a8adab;
-            --bg-edge:       #7a807e;
+            --bg-center:     #e0e3e2;
+            --bg-mid:        #b2b7b5;
+            --bg-edge:       #5e6462;
             /* Header: light frosted bar */
             --header-text:   #1d1d1f;
             --header-text-dim: #6e6e73;
@@ -34,6 +34,20 @@
             --modal-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
             --overlay-scrim: rgba(0, 0, 0, 0.28);
             --hairline:     rgba(0, 0, 0, 0.06);
+            /* Popup design system — one source of truth for all popups (matches teal logo) */
+            --popup-accent:         #0d9488;
+            --popup-accent-hover:   #0f766e;
+            --popup-accent-subtle:  rgba(13, 148, 136, 0.12);
+            --popup-accent-border:  rgba(13, 148, 136, 0.25);
+            --popup-bg:             #fafafa;
+            --popup-bg-top:         #ffffff;
+            --popup-surface:       #ffffff;
+            --popup-text:          #1a1a1c;
+            --popup-text-secondary: #5c5c62;
+            --popup-border:        rgba(0, 0, 0, 0.07);
+            --popup-border-strong:  rgba(0, 0, 0, 0.1);
+            --popup-shadow:        0 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 2px rgba(0, 0, 0, 0.02), 0 24px 56px -12px rgba(0, 0, 0, 0.14), 0 12px 28px -8px rgba(0, 0, 0, 0.08);
+            --popup-shadow-card:    0 0 0 1px rgba(0, 0, 0, 0.04), 0 8px 24px -4px rgba(0, 0, 0, 0.1);
         }
 
         * { box-sizing: border-box; }
@@ -145,7 +159,7 @@
             font-family: "Amarante", serif;
             font-size: 3.75rem;
             font-weight: 400;
-            color: var(--accent);
+            color: #0f766e;
             letter-spacing: 0.04em;
             cursor: pointer;
             user-select: none;
@@ -157,7 +171,7 @@
         .app-logo.font-loaded {
             opacity: 1;
         }
-        .app-logo:hover { color: var(--header-text); }
+        .app-logo:hover { color: #0d0d0d; }
         .app-logo .sc { font-variant: small-caps; }
 
         .header-rest {
@@ -212,7 +226,6 @@
             color: var(--surface-text);
         }
 
-        #preset-select { min-width: 108px; }
 
         .toolbar-btn {
             height: 28px;
@@ -245,26 +258,26 @@
         .keyboard-visual-modal.active { display: flex; }
 
         .keyboard-visual-panel {
-            background: var(--surface);
-            color: var(--surface-text);
-            border-radius: 8px;
+            background: var(--popup-surface);
+            color: var(--popup-text);
+            border-radius: 14px;
             padding: 1.25rem 1.5rem;
             max-width: 20rem;
             width: 90%;
             height: 72vh;
             max-height: 90vh;
-            box-shadow: var(--modal-shadow);
+            box-shadow: var(--popup-shadow-card);
             position: relative;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        .settings-about-content { font-size: 0.8rem; color: var(--surface-text-secondary); line-height: 1.6; }
+        .settings-about-content { font-size: 0.8rem; color: var(--popup-text-secondary); line-height: 1.6; }
         .settings-about-content p { margin: 0 0 0.6rem 0; }
         .settings-about-content p:last-child { margin-bottom: 0; }
-        .settings-about-content a { color: var(--accent); text-decoration: none; }
-        .settings-about-content a:hover { color: var(--accent-hover); text-decoration: underline; }
+        .settings-about-content a { color: var(--popup-accent); text-decoration: none; }
+        .settings-about-content a:hover { color: var(--popup-accent-hover); text-decoration: underline; }
 
         .keyboard-visual-setting-item { margin-bottom: 0.4rem; padding: 0; }
         .keyboard-visual-setting-item:last-child { margin-bottom: 0; }
@@ -276,20 +289,20 @@
             font-size: 0.7rem;
             line-height: 1.3;
             letter-spacing: 0.01em;
-            color: var(--surface-text);
+            color: var(--popup-text);
         }
         .keyboard-visual-setting-item input[type="checkbox"] {
             margin-top: 0.12rem;
             width: 0.85rem;
             height: 0.85rem;
             flex-shrink: 0;
-            accent-color: var(--accent);
+            accent-color: var(--popup-accent);
         }
         .keyboard-visual-setting-item .setting-description {
             display: block;
             margin-top: 0.1rem;
             font-size: 0.6rem;
-            color: var(--surface-text-secondary);
+            color: var(--popup-text-secondary);
             line-height: 1.25;
             letter-spacing: 0.01em;
         }
@@ -298,7 +311,7 @@
             padding: 0;
             font-size: 0.75rem;
             line-height: 1;
-            color: var(--surface-text-secondary);
+            color: var(--popup-accent);
             background: none;
             border: none;
             cursor: pointer;
@@ -306,33 +319,32 @@
             align-items: center;
             justify-content: center;
         }
-        .keyboard-visual-settings-menu:hover { color: var(--surface-text); }
+        .keyboard-visual-settings-menu:hover { color: var(--popup-accent-hover); }
         .settings-tabs {
             display: flex;
-            gap: 0.2rem;
+            gap: 0.25rem;
             margin-bottom: 0.6rem;
             padding-bottom: 0.4rem;
-            border-bottom: 1px solid var(--hairline);
+            border-bottom: 1px solid var(--popup-border);
             min-height: 1.75rem;
             align-items: flex-end;
             justify-content: center;
             flex-shrink: 0;
         }
         .settings-tab {
-            padding: 0.35rem 0.6rem;
-            font-size: 0.7rem;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.75rem;
             font-weight: 500;
-            letter-spacing: 0.02em;
+            letter-spacing: -0.01em;
             color: var(--surface-text-secondary);
-            background: none;
+            background: transparent;
             border: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -0.5rem;
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: 8px;
+            transition: color 0.2s, background 0.2s;
         }
-        .settings-tab:hover { color: var(--surface-text); }
-        .settings-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .settings-tab:hover { color: var(--popup-text); background: rgba(0, 0, 0, 0.04); }
+        .settings-tab.active { color: var(--popup-accent); background: var(--popup-accent-subtle); }
         .settings-panel {
             display: none;
             padding-top: 0;
@@ -345,17 +357,18 @@
         .keyboard-visual-setting-item .setting-label-inline { min-width: 3.5rem; font-weight: 500; font-size: 0.7rem; }
         .keyboard-visual-setting-item select {
             margin-left: 0.25rem;
-            padding: 0.25rem 0.4rem;
-            font-size: 0.7rem;
-            border: 1px solid var(--hairline);
-            border-radius: 4px;
-            background: var(--surface);
-            color: var(--surface-text);
+            padding: 0.25rem 0.45rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--popup-border-strong);
+            border-radius: 6px;
+            background: var(--popup-surface);
+            color: var(--popup-text);
+            height: auto;
+            line-height: 1.3;
         }
-        .keyboard-visual-setting-item select:focus { outline: none; border-color: var(--accent); }
+        .keyboard-visual-setting-item select:focus { outline: none; border-color: var(--popup-accent); box-shadow: 0 0 0 2px var(--popup-accent-subtle); }
         .keyboard-visual-setting-item input[type="range"] { flex: 1; min-width: 0; }
-        .settings-master-volume-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--surface-text-secondary); }
-        .settings-piano-brightness-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--surface-text-secondary); }
+        .settings-master-volume-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--popup-text-secondary); }
 
         /* MIDI Debug — Muji-style panel */
         #midi-debug-container {
@@ -420,7 +433,7 @@
         .midi-debug-detail-block { margin-top: 0.35rem; }
         .midi-debug-summary { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--hairline); font-size: 0.7rem; color: var(--surface-text-secondary); }
 
-        /* Sub-popups (Key Movement, Key Labels) — Muji minimal */
+        /* Sub-popups: use popup design system (Key Movement, Key Labels) — coherent with main popup */
         .key-movement-popup, .key-labels-popup {
             display: none;
             position: fixed;
@@ -428,75 +441,418 @@
             z-index: 3001;
             align-items: center;
             justify-content: center;
-            background: var(--overlay-scrim);
+            background: rgba(0, 0, 0, 0.32);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
         .key-movement-popup.active, .key-labels-popup.active { display: flex; }
         .key-movement-popup-content, .key-labels-popup-content {
-            background: var(--surface);
-            color: var(--surface-text);
-            border-radius: 8px;
-            padding: 1.5rem 1.75rem;
-            max-width: 20rem;
-            width: 90%;
+            background: var(--popup-surface);
+            color: var(--popup-text);
+            border-radius: 14px;
+            padding: 1.15rem 1.25rem 1.25rem;
+            padding-right: calc(1.25rem + 36px);
+            max-width: 26rem;
+            width: 94%;
+            min-width: 18rem;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: var(--modal-shadow);
+            box-shadow: var(--popup-shadow-card);
             position: relative;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            font-size: 15px;
         }
-        .key-movement-popup-header, .key-labels-popup-header { margin-bottom: 0.75rem; }
-        .key-movement-popup-header h2, .key-labels-popup-header h2 { margin: 0; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em; color: var(--surface-text); }
+        .key-movement-popup-header, .key-labels-popup-header {
+            margin-bottom: 0.6rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            min-height: 1.75rem;
+        }
+        .key-movement-popup-header h2, .key-labels-popup-header h2 { margin: 0; font-size: 1.05rem; font-weight: 600; letter-spacing: -0.02em; color: var(--popup-text); line-height: 1.3; }
         .key-movement-popup-close, .key-labels-popup-close {
             position: absolute;
-            top: 0.75rem;
-            right: 0.75rem;
-            width: 2rem;
-            height: 2rem;
+            top: 1.15rem;
+            right: 1.25rem;
+            width: 28px;
+            height: 28px;
             padding: 0;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             line-height: 1;
-            color: var(--surface-text-secondary);
-            background: none;
+            color: var(--popup-text-secondary);
+            background: transparent;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: color 0.2s;
+            transition: color 0.2s, background 0.2s;
         }
-        .key-movement-popup-close:hover, .key-labels-popup-close:hover { color: var(--surface-text); }
+        .key-movement-popup-close:hover, .key-labels-popup-close:hover { color: var(--popup-text); background: rgba(0, 0, 0, 0.06); }
         .key-movement-popup-body, .key-labels-popup-body { display: flex; flex-direction: column; gap: 0.75rem; }
-        .key-movement-setting, .key-labels-setting { display: flex; flex-direction: column; gap: 0.3rem; }
-        .key-movement-setting label, .key-labels-setting label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--surface-text); }
-        .key-movement-setting label span:first-child, .key-labels-setting label span:first-child { min-width: 5.5rem; font-weight: 500; }
+        .key-movement-setting, .key-labels-setting { display: flex; flex-direction: column; gap: 0.15rem; }
+        .key-movement-setting label, .key-labels-setting label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--popup-text);
+            min-height: 1.65rem;
+        }
+        .key-movement-setting label span:first-child, .key-labels-setting label span:first-child {
+            min-width: 5.5rem;
+            font-weight: 500;
+            line-height: 1.65rem;
+        }
         .key-movement-setting select, .key-labels-setting select {
             flex: 1;
-            padding: 0.4rem 0.55rem;
-            font-size: 0.75rem;
-            border: 1px solid var(--hairline);
-            border-radius: 4px;
-            background: var(--surface);
-            color: var(--surface-text);
+            min-height: 1.65rem;
+            padding: 0.2rem 0.5rem;
+            font-size: 13px;
+            border: 1px solid var(--popup-border-strong);
+            border-radius: 8px;
+            background: var(--popup-surface);
+            color: var(--popup-text);
+            line-height: 1.3;
         }
-        .key-movement-setting select:focus, .key-labels-setting select:focus { outline: none; border-color: var(--accent); }
-        .key-movement-setting input[type="range"] { flex: 1; }
-        .key-labels-setting input[type="checkbox"] { accent-color: var(--accent); }
-        .key-movement-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--surface-text-secondary); }
-        .key-movement-description, .key-labels-description { font-size: 0.7rem; color: var(--surface-text-secondary); line-height: 1.4; margin-top: 0.2rem; }
-        .key-movement-popup-footer, .key-labels-popup-footer { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--hairline); }
+        .key-movement-setting select:focus, .key-labels-setting select:focus { outline: none; border-color: var(--popup-accent); box-shadow: 0 0 0 3px var(--popup-accent-subtle); }
+        .key-movement-setting input[type="range"] { flex: 1; accent-color: var(--popup-accent); }
+        .key-labels-setting input[type="checkbox"] { accent-color: var(--popup-accent); }
+        .key-movement-value { min-width: 2.75rem; text-align: right; font-size: 14px; color: var(--popup-text-secondary); }
+        .key-movement-description, .key-labels-description { font-size: 12px; color: var(--popup-text-secondary); line-height: 1.4; margin-top: 0.15rem; }
+        .key-movement-popup-footer, .key-labels-popup-footer { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--popup-border); }
         .key-movement-reset, .key-labels-reset {
-            padding: 0.45rem 0.85rem;
-            font-size: 0.75rem;
+            padding: 0.5rem 1rem;
+            font-size: 14px;
             font-weight: 500;
-            letter-spacing: 0.02em;
-            color: var(--surface-text);
+            letter-spacing: -0.01em;
+            color: var(--popup-text);
             background: transparent;
-            border: 1px solid var(--hairline);
-            border-radius: 4px;
+            border: 1px solid var(--popup-border-strong);
+            border-radius: 10px;
             cursor: pointer;
             transition: border-color 0.2s, background 0.2s;
         }
-        .key-movement-reset:hover, .key-labels-reset:hover { border-color: var(--control-border); background: rgba(0, 0, 0, 0.04); }
+        .key-movement-reset:hover, .key-labels-reset:hover { border-color: var(--popup-border-strong); background: rgba(0, 0, 0, 0.04); }
+
+        /* Optional: reusable popup design-system classes — add to any popup for coherent look */
+        .ds-popup-content { background: var(--popup-surface); color: var(--popup-text); border-radius: 14px; padding: 1.5rem 1.75rem; box-shadow: var(--popup-shadow-card); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+        .ds-popup-title { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; color: var(--popup-text); margin: 0; }
+        .ds-popup-close { color: var(--popup-text-secondary); background: transparent; border: none; border-radius: 8px; cursor: pointer; transition: color 0.2s, background 0.2s; }
+        .ds-popup-close:hover { color: var(--popup-text); background: rgba(0, 0, 0, 0.06); }
+        .ds-popup-setting label { font-size: 14px; font-weight: 500; color: var(--popup-text); }
+        .ds-popup-select { padding: 0.5rem 0.65rem; font-size: 14px; border: 1px solid var(--popup-border-strong); border-radius: 10px; background: var(--popup-surface); color: var(--popup-text); }
+        .ds-popup-select:focus { outline: none; border-color: var(--popup-accent); box-shadow: 0 0 0 3px var(--popup-accent-subtle); }
+        .ds-popup-btn-secondary { padding: 0.5rem 1rem; font-size: 14px; font-weight: 500; color: var(--popup-text); background: transparent; border: 1px solid var(--popup-border-strong); border-radius: 10px; cursor: pointer; }
+        .ds-popup-btn-secondary:hover { background: rgba(0, 0, 0, 0.04); }
+
+        /* Popup: design system — teal accent, pill tabs (full-viewport, logo toggles) */
+        .app-popup {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: stretch;
+            justify-content: stretch;
+            background: rgba(0, 0, 0, 0.32);
+            backdrop-filter: blur(20px) saturate(100%);
+            -webkit-backdrop-filter: blur(20px) saturate(100%);
+            z-index: 1000;
+            padding: 0;
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+                        visibility 0s linear 0.55s;
+        }
+        .app-popup.visible {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+            transition-delay: 0s;
+        }
+        .app-popup-panel {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
+            font-size: 15px;
+            font-weight: 400;
+            line-height: 1.5;
+            letter-spacing: -0.015em;
+            background: linear-gradient(180deg, var(--popup-bg-top) 0%, var(--popup-bg) 100%);
+            color: var(--popup-text);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+            min-height: 0;
+            transform: translateY(20px);
+            opacity: 0.98;
+            transition: transform 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+                        opacity 0.5s ease-out;
+            box-shadow: var(--popup-shadow);
+            border-radius: 0;
+        }
+        .app-popup.visible .app-popup-panel {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .app-popup-panel .setting-description,
+        .app-popup-panel .instrument-category-title { color: var(--popup-text-secondary); font-size: 12.5px; font-weight: 500; letter-spacing: 0.02em; }
+        .app-popup-panel .app-popup-tab {
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            color: var(--popup-text-secondary);
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: color 0.2s ease, background 0.2s ease;
+            display: flex;
+            align-items: center;
+            padding: 0.4rem 1rem;
+        }
+        .app-popup-panel .app-popup-tab:hover { color: var(--popup-text); background: rgba(0, 0, 0, 0.04); }
+        .app-popup-panel .app-popup-tab.active {
+            color: var(--popup-accent);
+            background: var(--popup-accent-subtle);
+        }
+        .app-popup-panel .instrument-item {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            background: var(--popup-surface);
+            border: 1px solid var(--popup-border);
+            border-radius: 14px;
+            color: var(--popup-text);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        }
+        .app-popup-panel .instrument-item:hover {
+            background: var(--popup-bg);
+            border-color: var(--popup-border-strong);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+        .app-popup-panel .instrument-item.selected {
+            background: var(--popup-accent-subtle);
+            border-color: var(--popup-accent-border);
+            color: var(--popup-accent);
+            box-shadow: 0 0 0 1px var(--popup-accent-subtle);
+        }
+        .app-popup-panel .keyboard-visual-setting-item label {
+            color: var(--popup-text);
+            font-size: 14px;
+            font-weight: 500;
+            align-items: center;
+        }
+        .app-popup-panel .keyboard-visual-setting-item .setting-description { font-weight: 400; }
+        .app-popup-panel .settings-about-content {
+            color: var(--popup-text-secondary);
+            font-size: 15px;
+            line-height: 1.55;
+        }
+        .app-popup-panel .settings-about-content a { color: var(--popup-accent); font-weight: 500; }
+        .app-popup-panel .settings-about-content a:hover { color: var(--popup-accent-hover); text-decoration: underline; }
+        .app-popup-panel select {
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            background: var(--popup-surface);
+            border: 1px solid var(--popup-border-strong);
+            border-radius: 8px;
+            color: var(--popup-text);
+            padding: 0.35rem 0.6rem;
+            line-height: 1.3;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .app-popup-panel select:focus {
+            outline: none;
+            border-color: var(--popup-accent);
+            box-shadow: 0 0 0 3px var(--popup-accent-subtle);
+        }
+        .app-popup-panel input[type="range"] {
+            background: transparent;
+            border: none;
+            accent-color: var(--popup-accent);
+            max-width: 12rem;
+            flex: 1;
+            min-width: 6rem;
+        }
+        .app-popup-panel .settings-master-volume-value { color: var(--popup-text-secondary); font-size: 14px; font-weight: 500; }
+        /* Top bar = tabs (pill style, no underline) */
+        .app-popup-panel .app-popup-tabs {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0 1.75rem;
+            min-height: 56px;
+            background: var(--popup-bg-top);
+            border-bottom: 1px solid var(--popup-border);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+        }
+        .app-popup-tabs {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .app-popup-tab {
+            padding: 0.4rem 1rem;
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            color: var(--popup-text-secondary);
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: color 0.2s ease, background 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+        .app-popup-tab:hover { color: var(--popup-text); background: rgba(0, 0, 0, 0.04); }
+        .app-popup-tab.active {
+            color: var(--popup-accent);
+            background: var(--popup-accent-subtle);
+        }
+        .app-popup-close {
+            margin-left: auto;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            font-weight: 300;
+            line-height: 1;
+            color: var(--popup-text-secondary);
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: color 0.2s ease, background 0.2s ease;
+        }
+        .app-popup-close:hover {
+            color: var(--popup-text);
+            background: rgba(0, 0, 0, 0.06);
+        }
+        .app-popup-close:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--popup-accent);
+        }
+        /* Content area */
+        .app-popup-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding: 1.75rem 2rem;
+        }
+        /* Elegant scrollbar — shared by all popups (big, sub, modal, MIDI debug) */
+        .app-popup-body,
+        .key-movement-popup-content,
+        .key-labels-popup-content,
+        .keyboard-visual-panel,
+        #midi-debug-container {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+        }
+        .app-popup-body::-webkit-scrollbar,
+        .key-movement-popup-content::-webkit-scrollbar,
+        .key-labels-popup-content::-webkit-scrollbar,
+        .keyboard-visual-panel::-webkit-scrollbar,
+        #midi-debug-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .app-popup-body::-webkit-scrollbar-track,
+        .key-movement-popup-content::-webkit-scrollbar-track,
+        .key-labels-popup-content::-webkit-scrollbar-track,
+        .keyboard-visual-panel::-webkit-scrollbar-track,
+        #midi-debug-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 4px;
+        }
+        .app-popup-body::-webkit-scrollbar-thumb,
+        .key-movement-popup-content::-webkit-scrollbar-thumb,
+        .key-labels-popup-content::-webkit-scrollbar-thumb,
+        .keyboard-visual-panel::-webkit-scrollbar-thumb,
+        #midi-debug-container::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.16);
+            border-radius: 4px;
+        }
+        .app-popup-body::-webkit-scrollbar-thumb:hover,
+        .key-movement-popup-content::-webkit-scrollbar-thumb:hover,
+        .key-labels-popup-content::-webkit-scrollbar-thumb:hover,
+        .keyboard-visual-panel::-webkit-scrollbar-thumb:hover,
+        #midi-debug-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.24);
+        }
+        .app-popup-body::-webkit-scrollbar-thumb:active,
+        .key-movement-popup-content::-webkit-scrollbar-thumb:active,
+        .key-labels-popup-content::-webkit-scrollbar-thumb:active,
+        .keyboard-visual-panel::-webkit-scrollbar-thumb:active,
+        #midi-debug-container::-webkit-scrollbar-thumb:active {
+            background: rgba(0, 0, 0, 0.32);
+        }
+        .app-popup-body .settings-panel { display: none; padding: 0; margin: 0; }
+        .app-popup-body .settings-panel.active { display: block; }
+        .instrument-category {
+            margin-bottom: 1.5rem;
+        }
+        .instrument-category-title {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--popup-text-secondary);
+            margin-bottom: 0.6rem;
+            padding-bottom: 0.3rem;
+        }
+        .instrument-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+            gap: 0.65rem;
+        }
+        .instrument-item {
+            padding: 0.7rem 1rem;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            text-align: left;
+            background: var(--popup-surface);
+            border: 1px solid var(--popup-border);
+            border-radius: 14px;
+            cursor: pointer;
+            color: var(--popup-text);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .instrument-item:hover {
+            background: var(--popup-bg);
+            border-color: var(--popup-border-strong);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+        .instrument-item.selected {
+            background: var(--popup-accent-subtle);
+            border-color: var(--popup-accent-border);
+            color: var(--popup-accent);
+            box-shadow: 0 0 0 1px var(--popup-accent-subtle);
+        }
+        #settings-panel-instrument { padding: 0; }
+        .display-section-divider {
+            height: 1px;
+            background: var(--popup-border);
+            margin: 1.25rem 0;
+        }
+        .app-popup-panel .keyboard-visual-setting-item input[type="checkbox"] { accent-color: var(--popup-accent); }
+        .app-popup-panel .keyboard-visual-settings-menu {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--popup-accent);
+        }
+        .app-popup-panel .keyboard-visual-settings-menu:hover { color: var(--popup-accent-hover); }
     </style>
 </head>
 <body>
@@ -504,15 +860,68 @@
     <div class="overlay">
         <header class="header">
             <h1 class="app-logo" id="app-logo">Pri<span class="sc">midi</span></h1>
-            <div class="header-rest" id="header-rest">
-                <div class="toolbar">
-                    <select id="preset-select">
-                        <option value="">Loading…</option>
-                    </select>
-                    <button type="button" id="keyboard-visual-icon" class="toolbar-btn" aria-label="Settings">Settings</button>
+            <!-- Hidden preset select keeps v1_10b preload path: populateGslPresetDropdown populates it and triggers piano preload -->
+            <select id="preset-select" aria-hidden="true" style="position:absolute;width:1px;height:1px;clip:rect(0,0,0,0);overflow:hidden;opacity:0;pointer-events:none">
+                <option value="">Loading…</option>
+            </select>
+        </header>
+    </div>
+    <!-- Big popup: Instrument | Keyboard | Sound | Camera | About (logo click toggles) -->
+    <div class="app-popup" id="app-popup" role="dialog" aria-label="Settings">
+        <div class="app-popup-panel">
+            <div class="app-popup-tabs" role="tablist">
+                <button type="button" class="app-popup-tab active" role="tab" id="app-tab-instrument" data-panel="settings-panel-instrument">Instrument</button>
+                <button type="button" class="app-popup-tab" role="tab" id="app-tab-sound" data-panel="settings-panel-sound">Sound</button>
+                <button type="button" class="app-popup-tab" role="tab" id="app-tab-about" data-panel="settings-panel-about">About</button>
+                <button type="button" class="app-popup-tab" role="tab" id="app-tab-display" data-panel="settings-panel-keyboard">Display</button>
+                <button type="button" class="app-popup-close" id="app-popup-close" aria-label="Close">×</button>
+            </div>
+            <div class="app-popup-body" id="app-popup-body">
+                <div id="settings-panel-instrument" class="settings-panel active">
+                    <div id="instrument-grid-container"></div>
+                </div>
+                <div id="settings-panel-keyboard" class="settings-panel">
+                    <div class="keyboard-visual-setting-item">
+                        <label><input type="checkbox" id="enable-key-highlight"><div><strong>Key highlight</strong></div></label>
+                    </div>
+                    <div class="keyboard-visual-setting-item">
+                        <label><input type="checkbox" id="enable-key-movement" checked><div><strong>Key movement</strong><button type="button" class="keyboard-visual-settings-menu" id="key-movement-settings-btn" aria-label="More options">››</button></div></label>
+                    </div>
+                    <div class="keyboard-visual-setting-item">
+                        <label><input type="checkbox" id="enable-key-labels" checked><div><strong>Key labels</strong><button type="button" class="keyboard-visual-settings-menu" id="key-labels-settings-btn" aria-label="More options">››</button></div></label>
+                    </div>
+                    <div class="keyboard-visual-setting-item">
+                        <label><input type="checkbox" id="enable-midi-input" checked><div><strong>MIDI input</strong></div></label>
+                    </div>
+                    <div class="keyboard-visual-setting-item">
+                        <label><input type="checkbox" id="enable-keypress-input" checked><div><strong>Computer keyboard</strong></div></label>
+                    </div>
+                    <div class="keyboard-visual-setting-item">
+                        <label><input type="checkbox" id="enable-midi-debug"><div><strong>MIDI monitor</strong></div></label>
+                    </div>
+                    <div class="display-section-divider"></div>
+                    <div class="keyboard-visual-setting-item">
+                        <p class="settings-about-content" style="margin:0; font-size:14px;"><strong>Camera</strong> — Spacebar cycles views; R orbits the camera.</p>
+                    </div>
+                </div>
+                <div id="settings-panel-sound" class="settings-panel">
+                    <div class="keyboard-visual-setting-item">
+                        <label><span class="setting-label-inline">Reverb</span><select id="settings-reverb-select"><option value="0">Off</option><option value="25">Subtle</option><option value="50" selected>Light</option><option value="75">Medium</option><option value="100">Full</option></select></label>
+                    </div>
+                    <div class="keyboard-visual-setting-item">
+                        <label><span class="setting-label-inline">Stereo width</span><select id="settings-stereo-select"><option value="-100">Wide</option><option value="-75" selected>Moderate</option><option value="-50">Narrow</option><option value="-25">Subtle</option><option value="0">Mono</option></select></label>
+                    </div>
+                    <div class="keyboard-visual-setting-item">
+                        <label><span class="setting-label-inline">Master level</span><input type="range" id="settings-master-volume" min="0" max="2000" value="1000" step="10"><span class="settings-master-volume-value" id="settings-master-volume-value">1000%</span></label>
+                    </div>
+                </div>
+                <div id="settings-panel-about" class="settings-panel">
+                    <div class="settings-about-content">
+                        <p>Created by <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Beats Away</a>, 2026. If you enjoy using it, you can <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">support its development</a>.</p>
+                    </div>
                 </div>
             </div>
-        </header>
+        </div>
     </div>
     <script type="importmap">
         {
@@ -555,24 +964,121 @@
             } else if (appLogo) {
                 appLogo.classList.add('font-loaded');
             }
-            // Initialize keyboard visual settings module
+            // Initialize keyboard visual settings module (binds to panels inside app-popup)
             if (window.initKeyboardVisualSettings) {
                 window.initKeyboardVisualSettings();
             }
-            
-            // PriMIDI logo: click toggles rest of header (preset, Settings)
-            const headerRest = document.getElementById('header-rest');
-            if (appLogo && headerRest) {
-                appLogo.addEventListener('click', () => headerRest.classList.toggle('visible'));
-            }
-            // Settings button
-            const keyboardVisualIcon = document.getElementById('keyboard-visual-icon');
-            if (keyboardVisualIcon && window.showKeyboardVisualSettings) {
-                keyboardVisualIcon.addEventListener('click', () => {
-                    window.showKeyboardVisualSettings();
+
+            // Logo click: fade in/out big popup (Instrument, Keyboard, Sound, Camera, About)
+            const appPopup = document.getElementById('app-popup');
+            if (appLogo && appPopup) {
+                appLogo.addEventListener('click', () => {
+                    appPopup.classList.toggle('visible');
                 });
             }
-            
+            // Close: button and Escape
+            const closeBtn = document.getElementById('app-popup-close');
+            if (closeBtn && appPopup) {
+                closeBtn.addEventListener('click', () => appPopup.classList.remove('visible'));
+            }
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && appPopup && appPopup.classList.contains('visible')) {
+                    appPopup.classList.remove('visible');
+                }
+            });
+            // Popup tabs: switch panel
+            document.querySelectorAll('.app-popup-tab').forEach((tab) => {
+                tab.addEventListener('click', () => {
+                    const panelId = tab.getAttribute('data-panel');
+                    if (!panelId) return;
+                    document.querySelectorAll('.app-popup-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.app-popup-body .settings-panel').forEach(p => p.classList.remove('active'));
+                    tab.classList.add('active');
+                    const panel = document.getElementById(panelId);
+                    if (panel) panel.classList.add('active');
+                });
+            });
+            // Instrument grid: categorized list (multi per row), filled from GSL manifest
+            const GM_CATEGORIES = { '000': 'Piano & Keys', '001': 'Piano & Keys', '008': 'Synth', '009': 'Ethnic', '011': 'Organs & Keys', '012': 'Orchestral', '013': 'Synth', '016': 'Organ', '025': 'Pipe', '026': 'Pipe', '120': 'Drums', '128': 'SFX' };
+            function displayName(entry) {
+                if (entry.label && typeof entry.label === 'string') return entry.label;
+                if (entry.id && typeof entry.id === 'string') return entry.id.replace(/^\d+_\d+_\s*/, '');
+                return entry.slug || '';
+            }
+            function buildInstrumentGrid(list) {
+                const container = document.getElementById('instrument-grid-container');
+                if (!container || !list || !list.length) return;
+                const byCat = {};
+                list.forEach((entry) => {
+                    const parts = (entry.id || entry.slug || '').split('_');
+                    const prefix = entry.id ? parts[0] : (parts[1] || 'Other');
+                    const cat = GM_CATEGORIES[prefix] || 'Instruments';
+                    if (!byCat[cat]) byCat[cat] = [];
+                    byCat[cat].push(entry);
+                });
+                const order = ['Piano & Keys', 'Organs & Keys', 'Organ', 'Orchestral', 'Synth', 'Ethnic', 'Pipe', 'Drums', 'SFX', 'Instruments', 'Other'];
+                const seen = new Set();
+                container.innerHTML = '';
+                function sortCategoryFirstPiano(entries) {
+                    return entries.slice().sort(function (a, b) {
+                        if (a.slug === 'gsl_piano') return -1;
+                        if (b.slug === 'gsl_piano') return 1;
+                        return 0;
+                    });
+                }
+                order.forEach((cat) => {
+                    if (!byCat[cat] || !byCat[cat].length) return;
+                    seen.add(cat);
+                    const section = document.createElement('div');
+                    section.className = 'instrument-category';
+                    section.innerHTML = '<div class="instrument-category-title">' + cat + '</div><div class="instrument-grid"></div>';
+                    const grid = section.querySelector('.instrument-grid');
+                    sortCategoryFirstPiano(byCat[cat]).forEach((entry) => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'instrument-item';
+                        btn.textContent = displayName(entry);
+                        btn.dataset.slug = entry.slug;
+                        btn.addEventListener('click', () => {
+                            if (window.applySoundPreset) window.applySoundPreset(entry.slug);
+                            container.querySelectorAll('.instrument-item.selected').forEach(el => el.classList.remove('selected'));
+                            btn.classList.add('selected');
+                        });
+                        grid.appendChild(btn);
+                    });
+                    container.appendChild(section);
+                });
+                Object.keys(byCat).filter(c => !seen.has(c)).forEach((cat) => {
+                    if (!byCat[cat].length) return;
+                    const section = document.createElement('div');
+                    section.className = 'instrument-category';
+                    section.innerHTML = '<div class="instrument-category-title">' + cat + '</div><div class="instrument-grid"></div>';
+                    const grid = section.querySelector('.instrument-grid');
+                    sortCategoryFirstPiano(byCat[cat]).forEach((entry) => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'instrument-item';
+                        btn.textContent = displayName(entry);
+                        btn.dataset.slug = entry.slug;
+                        btn.addEventListener('click', () => {
+                            if (window.applySoundPreset) window.applySoundPreset(entry.slug);
+                            container.querySelectorAll('.instrument-item.selected').forEach(el => el.classList.remove('selected'));
+                            btn.classList.add('selected');
+                        });
+                        grid.appendChild(btn);
+                    });
+                    container.appendChild(section);
+                });
+                if (!window.currentGslPreset && list.some(function (e) { return e.slug === 'gsl_piano'; })) {
+                    window.currentGslPreset = 'gsl_piano';
+                }
+                const current = window.currentGslPreset;
+                if (current) container.querySelectorAll('.instrument-item[data-slug="' + current + '"]').forEach(el => el.classList.add('selected'));
+            }
+            if (window.InstrumentSampleHandler && window.InstrumentSampleHandler.ensureGslManifest) {
+                window.InstrumentSampleHandler.ensureGslManifest().then(buildInstrumentGrid).catch(() => {});
+            }
+
             // View 0: Front horizontal — position + target only; OrbitControls gives level view, no special case
             const cameraView0 = {
                 position: { x: 0, y: 0.5, z: 1.8 },
@@ -706,89 +1212,7 @@
                     o.speed = newSpeed;
                 }
             };
-            
-            // Preset dropdown handler
-            const presetSelect = document.getElementById('preset-select');
-            if (presetSelect) {
-                // Track the value before it gets cleared
-                let pendingSelection = null;
-                
-                // Use input event which fires when selection changes - process preset here directly
-                presetSelect.addEventListener('input', function(e) {
-                    const selectedIndex = e.target.selectedIndex;
-                    const presetName = selectedIndex >= 0 && selectedIndex < e.target.options.length 
-                        ? e.target.options[selectedIndex].value 
-                        : (e.target.value || null);
-                    
-                    if (presetName) {
-                        pendingSelection = presetName;
-                        // Process the preset immediately in input event
-                        processPresetSelection(presetName);
-                    }
-                });
-                
-                // Function to process preset selection
-                function processPresetSelection(presetName) {
-                    if (!presetName) return;
-                    
-                    console.log(`Dropdown changed to: ${presetName}`);
-                    
-                    // Store the value FIRST to preserve it
-                    const selectedValue = presetName;
-                    
-                    // Function to apply preset (with retry logic)
-                    function tryApplyPreset() {
-                        if (window.applySoundPreset) {
-                            console.log('Calling applySoundPreset...');
-                            
-                            try {
-                                window.applySoundPreset(selectedValue);
-                            } catch (error) {
-                                console.error('Error calling applySoundPreset:', error);
-                            }
-                            
-                            // Ensure dropdown value stays
-                            if (presetSelect.value !== selectedValue) {
-                                presetSelect.value = selectedValue;
-                            }
-                        } else {
-                            console.warn('applySoundPreset not available yet, retrying...');
-                            setTimeout(tryApplyPreset, 100);
-                        }
-                    }
-                    
-                    // Try to apply preset
-                    tryApplyPreset();
-                    
-                    // Also ensure value is preserved after a delay
-                    setTimeout(() => {
-                        if (presetSelect.value !== selectedValue) {
-                            presetSelect.value = selectedValue;
-                        }
-                    }, 200);
-                }
-                
-                // Also handle change event as fallback (but input should fire first)
-                presetSelect.addEventListener('change', function(e) {
-                    // Only process if we didn't already process via input event
-                    if (pendingSelection) {
-                        // Already processed in input event, just clear the flag
-                        pendingSelection = null;
-                        return;
-                    }
-                    
-                    // Fallback: try to get value if input event didn't fire
-                    const selectedIndex = e.target.selectedIndex;
-                    const presetName = selectedIndex >= 0 && selectedIndex < e.target.options.length 
-                        ? e.target.options[selectedIndex].value 
-                        : (e.target.value || null);
-                    
-                    if (presetName) {
-                        processPresetSelection(presetName);
-                    }
-                });
-            }
-            
+
             // Keyboard shortcut: 9 to log camera settings (for debug and future use)
             window.addEventListener('keydown', (e) => {
                 if (e.key === '9' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {

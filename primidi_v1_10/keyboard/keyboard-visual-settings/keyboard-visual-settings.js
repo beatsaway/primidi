@@ -10,18 +10,18 @@
     let settingsPanel = null;
     
     /**
-     * Initialize the keyboard visual settings UI
+     * Initialize the keyboard visual settings UI (uses app-popup if present, else creates own modal)
      */
     window.initKeyboardVisualSettings = function() {
-        // Create modal and panel if they don't exist
-        if (!document.getElementById('keyboard-visual-modal')) {
+        const appPopup = document.getElementById('app-popup');
+        if (appPopup) {
+            settingsModal = appPopup;
+            settingsPanel = document.getElementById('app-popup-body');
+        } else if (!document.getElementById('keyboard-visual-modal')) {
             createSettingsUI();
         }
-        
         setupEventListeners();
         updateUI();
-        
-        // Initialize sub-popups
         initKeyMovementSettings();
         initKeyLabelsSettings();
     };
@@ -52,27 +52,15 @@
                 <div class="keyboard-visual-setting-item">
                     <label>
                         <input type="checkbox" id="enable-key-highlight">
-                        <div>
-                            <strong>Highlight on Press</strong>
-                            <div class="setting-description">Key glow on press.</div>
-                        </div>
+                        <div><strong>Key highlight</strong></div>
                     </label>
-                </div>
-                <div class="keyboard-visual-setting-item">
-                    <label class="keyboard-visual-setting-row">
-                        <span class="setting-label-inline">Piano brightness</span>
-                        <input type="range" id="settings-piano-brightness" min="0" max="100" value="100" step="1" style="flex:1; min-width:80px;">
-                        <span class="settings-piano-brightness-value" id="settings-piano-brightness-value">100%</span>
-                    </label>
-                    <div class="setting-description" style="margin-top:4px;">Dark ← → Normal (key material only)</div>
                 </div>
                 <div class="keyboard-visual-setting-item">
                     <label>
                         <input type="checkbox" id="enable-key-movement" checked>
                         <div>
-                            <strong>Key Up/Down Movement</strong>
-                            <button type="button" class="keyboard-visual-settings-menu" id="key-movement-settings-btn" aria-label="More settings">>></button>
-                            <div class="setting-description">Keys move down/up with press/release.</div>
+                            <strong>Key movement</strong>
+                            <button type="button" class="keyboard-visual-settings-menu" id="key-movement-settings-btn" aria-label="More options">››</button>
                         </div>
                     </label>
                 </div>
@@ -80,37 +68,27 @@
                     <label>
                         <input type="checkbox" id="enable-key-labels" checked>
                         <div>
-                            <strong>Key Labels</strong>
-                            <button type="button" class="keyboard-visual-settings-menu" id="key-labels-settings-btn" aria-label="More settings">>></button>
-                            <div class="setting-description">Note names on keys (e.g. C4, A0).</div>
+                            <strong>Key labels</strong>
+                            <button type="button" class="keyboard-visual-settings-menu" id="key-labels-settings-btn" aria-label="More options">››</button>
                         </div>
                     </label>
                 </div>
                 <div class="keyboard-visual-setting-item">
                     <label>
                         <input type="checkbox" id="enable-midi-input" checked>
-                        <div>
-                            <strong>MIDI Input</strong>
-                            <div class="setting-description">Use MIDI controller to play.</div>
-                        </div>
+                        <div><strong>MIDI input</strong></div>
                     </label>
                 </div>
                 <div class="keyboard-visual-setting-item">
                     <label>
                         <input type="checkbox" id="enable-keypress-input" checked>
-                        <div>
-                            <strong>Keyboard Input</strong>
-                            <div class="setting-description">Computer keys: a–k = C3–D4; &lt; &gt; = octave.</div>
-                        </div>
+                        <div><strong>Computer keyboard</strong></div>
                     </label>
                 </div>
                 <div class="keyboard-visual-setting-item">
                     <label>
                         <input type="checkbox" id="enable-midi-debug">
-                        <div>
-                            <strong>MIDI Debug</strong>
-                            <div class="setting-description">Show note/velocity on press.</div>
-                        </div>
+                        <div><strong>MIDI monitor</strong></div>
                     </label>
                 </div>
             </div>
@@ -119,47 +97,43 @@
                     <label>
                         <span class="setting-label-inline">Reverb</span>
                         <select id="settings-reverb-select">
-                            <option value="0">none</option>
-                            <option value="25">subtle</option>
-                            <option value="50" selected>less</option>
-                            <option value="75">more</option>
-                            <option value="100">full on</option>
+                            <option value="0">Off</option>
+                            <option value="25">Subtle</option>
+                            <option value="50" selected>Light</option>
+                            <option value="75">Medium</option>
+                            <option value="100">Full</option>
                         </select>
                     </label>
-                    <div class="setting-description">Room ambience amount.</div>
                 </div>
                 <div class="keyboard-visual-setting-item">
                     <label>
-                        <span class="setting-label-inline">Stereo</span>
+                        <span class="setting-label-inline">Stereo width</span>
                         <select id="settings-stereo-select">
-                            <option value="-100">full on</option>
-                            <option value="-75" selected>more</option>
-                            <option value="-50">less</option>
-                            <option value="-25">subtle</option>
-                            <option value="0">weak</option>
+                            <option value="-100">Wide</option>
+                            <option value="-75" selected>Moderate</option>
+                            <option value="-50">Narrow</option>
+                            <option value="-25">Subtle</option>
+                            <option value="0">Mono</option>
                         </select>
                     </label>
-                    <div class="setting-description">Stereo width (wider = more spread).</div>
                 </div>
                 <div class="keyboard-visual-setting-item">
                     <label>
-                        <span class="setting-label-inline">Master</span>
+                        <span class="setting-label-inline">Master level</span>
                         <input type="range" id="settings-master-volume" min="0" max="2000" value="1000" step="10">
                         <span class="settings-master-volume-value" id="settings-master-volume-value">1000%</span>
                     </label>
-                    <div class="setting-description">Final output gain (0–2000%).</div>
                 </div>
             </div>
             <div id="settings-panel-camera" class="settings-panel" role="tabpanel">
                 <div class="settings-about-content">
-                    <p><strong>Spacebar</strong> — cycle to next camera view.</p>
-                    <p><strong>R</strong> — toggle camera rotate (orbit) on/off.</p>
+                    <p><strong>Spacebar</strong> — Cycle to the next camera view.</p>
+                    <p><strong>R</strong> — Toggle camera orbit on or off.</p>
                 </div>
             </div>
             <div id="settings-panel-about" class="settings-panel" role="tabpanel">
                 <div class="settings-about-content">
-                    <p><strong>Pri<span style="font-variant: small-caps">midi</span></strong></p>
-                    <p>Developed by <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Beats Away</a> in 2026. If you enjoy using this premium midi synth for free, <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">buy me a coffee ☕</a>.</p>
+                    <p>Created by <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Beats Away</a>, 2026. If you enjoy using it, you can <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">support its development</a>.</p>
                 </div>
             </div>
         `;
@@ -225,27 +199,14 @@
             });
         }
 
-        // Close on modal background click
         if (settingsModal) {
             settingsModal.addEventListener('click', (e) => {
-                if (e.target === settingsModal) {
+                if (e.target !== settingsModal) return;
+                if (settingsModal.id === 'app-popup') {
+                    settingsModal.classList.remove('visible');
+                } else {
                     settingsModal.style.display = 'none';
                     settingsModal.classList.remove('active');
-                }
-            });
-        }
-        
-        // Piano brightness slider (how dark the piano keys look)
-        window.pianoBrightness = window.pianoBrightness !== undefined ? window.pianoBrightness : 1;
-        const pianoBrightnessSlider = document.getElementById('settings-piano-brightness');
-        const pianoBrightnessValue = document.getElementById('settings-piano-brightness-value');
-        if (pianoBrightnessSlider && pianoBrightnessValue) {
-            pianoBrightnessSlider.addEventListener('input', function () {
-                const v = Math.max(0, Math.min(100, parseInt(this.value, 10) || 100));
-                window.pianoBrightness = v / 100;
-                pianoBrightnessValue.textContent = v + '%';
-                if (typeof window.applyPianoBrightness === 'function') {
-                    window.applyPianoBrightness();
                 }
             });
         }
@@ -375,7 +336,6 @@
                                 <option value="animated" selected>Animated Movement</option>
                             </select>
                         </label>
-                        <div class="key-movement-description">Choose how keys move when pressed/released. Instant = immediate movement, Animated = smooth transition.</div>
                     </div>
                     
                     <div class="key-movement-setting">
@@ -384,7 +344,6 @@
                             <input type="range" id="key-movement-depth" min="0" max="100" value="70" step="1">
                             <span class="key-movement-value" id="key-movement-depth-value">70%</span>
                         </label>
-                        <div class="key-movement-description">How far down keys move when pressed (percentage of key height). Default: 70%</div>
                     </div>
                     
                     
@@ -711,17 +670,6 @@
         const keypressInputCheckbox = document.getElementById('enable-keypress-input');
         const midiDebugCheckbox = document.getElementById('enable-midi-debug');
         
-        const pianoBrightnessSlider = document.getElementById('settings-piano-brightness');
-        const pianoBrightnessValueEl = document.getElementById('settings-piano-brightness-value');
-        if (pianoBrightnessSlider && pianoBrightnessValueEl) {
-            const v = Math.round((window.pianoBrightness !== undefined ? window.pianoBrightness : 1) * 100);
-            pianoBrightnessSlider.value = v;
-            pianoBrightnessValueEl.textContent = v + '%';
-            if (typeof window.applyPianoBrightness === 'function') {
-                window.applyPianoBrightness();
-            }
-        }
-        
         if (highlightCheckbox) {
             highlightCheckbox.checked = window.keyHighlightSettings.enabled;
         }
@@ -749,23 +697,21 @@
         }
     }
     
-    /**
-     * Show the settings modal
-     */
     window.showKeyboardVisualSettings = function() {
-        if (settingsModal) {
-            settingsModal.style.display = 'flex';
-            settingsModal.classList.add('active');
-            updateUI();
-        } else {
-            // Initialize if not already done
+        if (!settingsModal) {
             createSettingsUI();
             setupEventListeners();
-            if (settingsModal) {
+        }
+        if (settingsModal) {
+            if (settingsModal.id === 'app-popup') {
+                settingsModal.classList.add('visible');
+                const tab = document.getElementById('app-tab-display');
+                if (tab) tab.click();
+            } else {
                 settingsModal.style.display = 'flex';
                 settingsModal.classList.add('active');
-                updateUI();
             }
+            updateUI();
         }
     };
     

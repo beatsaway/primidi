@@ -1,0 +1,90 @@
+[
+  {
+    "keyLow": 0,
+    "keyHigh": 34,
+    "originalPitchCents": 4574,
+    "file": "zone_0_midi0_keys_0-34.wav",
+    "loopStart": 0.3894333333,
+    "loopEnd": 0.4570333333
+  },
+  {
+    "keyLow": 35,
+    "keyHigh": 41,
+    "originalPitchCents": 4574,
+    "file": "zone_1_midi0_keys_35-41.wav",
+    "loopStart": 0.3894333333,
+    "loopEnd": 0.4570333333
+  },
+  {
+    "keyLow": 42,
+    "keyHigh": 47,
+    "originalPitchCents": 4574,
+    "file": "zone_2_midi0_keys_42-47.wav",
+    "loopStart": 0.3894333333,
+    "loopEnd": 0.4570333333
+  },
+  {
+    "keyLow": 48,
+    "keyHigh": 52,
+    "originalPitchCents": 5274,
+    "file": "zone_3_midi0_keys_48-52.wav",
+    "loopStart": 0.2209333333,
+    "loopEnd": 0.2660666667
+  },
+  {
+    "keyLow": 53,
+    "keyHigh": 57,
+    "originalPitchCents": 5274,
+    "file": "zone_4_midi0_keys_53-57.wav",
+    "loopStart": 0.2209333333,
+    "loopEnd": 0.2660666667
+  },
+  {
+    "keyLow": 58,
+    "keyHigh": 62,
+    "originalPitchCents": 6174,
+    "file": "zone_5_midi0_keys_58-62.wav",
+    "loopStart": 0.2292,
+    "loopEnd": 0.2560333333
+  },
+  {
+    "keyLow": 63,
+    "keyHigh": 68,
+    "originalPitchCents": 6174,
+    "file": "zone_6_midi0_keys_63-68.wav",
+    "loopStart": 0.2292,
+    "loopEnd": 0.2560333333
+  },
+  {
+    "keyLow": 69,
+    "keyHigh": 75,
+    "originalPitchCents": 6973,
+    "file": "zone_7_midi0_keys_69-75.wav",
+    "loopStart": 0.1754666667,
+    "loopEnd": 0.1987
+  },
+  {
+    "keyLow": 76,
+    "keyHigh": 83,
+    "originalPitchCents": 8391,
+    "file": "zone_8_midi0_keys_76-83.wav",
+    "loopStart": 0.1296666667,
+    "loopEnd": 0.1753
+  },
+  {
+    "keyLow": 84,
+    "keyHigh": 92,
+    "originalPitchCents": 8391,
+    "file": "zone_9_midi0_keys_84-92.wav",
+    "loopStart": 0.1296666667,
+    "loopEnd": 0.1753
+  },
+  {
+    "keyLow": 93,
+    "keyHigh": 127,
+    "originalPitchCents": 8278,
+    "file": "zone_10_midi0_keys_93-127.wav",
+    "loopStart": 0.3542666667,
+    "loopEnd": 0.3752333333
+  }
+]

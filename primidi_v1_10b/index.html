@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Primidi</title>
+    <!-- Suppress favicon request to prevent 404 error -->
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amarante&display=swap" rel="stylesheet" id="font-amarante">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* — Light mode palette (coherent across page) — */
+        :root {
+            /* Scene / page: soft light gradient, stronger falloff with darker outer ring */
+            --bg-center:     #d2d5d4;
+            --bg-mid:        #a8adab;
+            --bg-edge:       #7a807e;
+            /* Header: light frosted bar */
+            --header-text:   #1d1d1f;
+            --header-text-dim: #6e6e73;
+            /* Toolbar controls: light */
+            --control-bg:    #fff;
+            --control-border: rgba(0, 0, 0, 0.12);
+            --control-hover: rgba(0, 0, 0, 0.06);
+            /* Panels / modals: Muji-style light surface */
+            --surface:      #fafafa;
+            --surface-text: #2c2c2c;
+            --surface-text-secondary: #737373;
+            --accent:       #1e3a5f;
+            --accent-hover: #152a47;
+            --modal-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+            --overlay-scrim: rgba(0, 0, 0, 0.28);
+            --hairline:     rgba(0, 0, 0, 0.06);
+        }
+
+        * { box-sizing: border-box; }
+        html {
+            font-size: 14px;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+            font-size: 1rem;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: radial-gradient(ellipse 100% 85% at 50% 45%, var(--bg-center) 0%, var(--bg-mid) 38%, var(--bg-edge) 100%);
+            color: var(--surface-text);
+        }
+        /* Full-screen dark overlay: glow in to normal over 4s (no hold) */
+        .bg-reveal {
+            position: fixed;
+            inset: 0;
+            background: #151518;
+            z-index: 0;
+            opacity: 1;
+            transition: opacity 4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            pointer-events: none;
+        }
+        .bg-reveal.revealed {
+            opacity: 0;
+        }
+        canvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 1;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .overlay > * { pointer-events: auto; }
+
+        .div-labels-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            overflow: visible;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .div-labels-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .div-label-cell {
+            position: absolute;
+            left: 0;
+            top: 0;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            padding: 0.2rem 0.45rem;
+            background: #fff;
+            color: #1d1d1f;
+            border-radius: 999px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        .div-label-cell span {
+            font-size: inherit;
+            font-weight: inherit;
+            letter-spacing: inherit;
+            color: inherit;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            min-height: 36px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px 10px;
+            z-index: 101;
+        }
+
+        .app-logo {
+            margin: 0;
+            font-family: "Amarante", serif;
+            font-size: 3.75rem;
+            font-weight: 400;
+            color: var(--accent);
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s ease, opacity 0.2s ease;
+            text-align: center;
+            /* Hidden until Amarante is loaded to avoid font flash (FOUT) */
+            opacity: 0;
+        }
+        .app-logo.font-loaded {
+            opacity: 1;
+        }
+        .app-logo:hover { color: var(--header-text); }
+        .app-logo .sc { font-variant: small-caps; }
+
+        .header-rest {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 6px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .header-rest.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .toolbar select {
+            height: 28px;
+            padding: 0 22px 0 8px;
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            color: var(--header-text);
+            background: var(--control-bg);
+            border: 1px solid var(--hairline);
+            border-radius: 4px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 12 12'%3E%3Cpath fill='%236e6e73' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 5px center;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+        .toolbar select:hover {
+            border-color: rgba(0, 0, 0, 0.2);
+            background: var(--control-hover);
+        }
+        .toolbar select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .toolbar select option {
+            background: var(--surface);
+            color: var(--surface-text);
+        }
+
+        #preset-select { min-width: 108px; }
+
+        .toolbar-btn {
+            height: 28px;
+            padding: 0 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            color: var(--header-text);
+            background: var(--control-bg);
+            border: 1px solid var(--hairline);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+        .toolbar-btn:hover {
+            border-color: var(--control-border);
+            background: var(--control-hover);
+        }
+
+        /* Modals — Muji minimal */
+        .keyboard-visual-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--overlay-scrim);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .keyboard-visual-modal.active { display: flex; }
+
+        .keyboard-visual-panel {
+            background: var(--surface);
+            color: var(--surface-text);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            max-width: 20rem;
+            width: 90%;
+            height: 72vh;
+            max-height: 90vh;
+            box-shadow: var(--modal-shadow);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .settings-about-content { font-size: 0.8rem; color: var(--surface-text-secondary); line-height: 1.6; }
+        .settings-about-content p { margin: 0 0 0.6rem 0; }
+        .settings-about-content p:last-child { margin-bottom: 0; }
+        .settings-about-content a { color: var(--accent); text-decoration: none; }
+        .settings-about-content a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+        .keyboard-visual-setting-item { margin-bottom: 0.4rem; padding: 0; }
+        .keyboard-visual-setting-item:last-child { margin-bottom: 0; }
+        .keyboard-visual-setting-item label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.35rem;
+            cursor: pointer;
+            font-size: 0.7rem;
+            line-height: 1.3;
+            letter-spacing: 0.01em;
+            color: var(--surface-text);
+        }
+        .keyboard-visual-setting-item input[type="checkbox"] {
+            margin-top: 0.12rem;
+            width: 0.85rem;
+            height: 0.85rem;
+            flex-shrink: 0;
+            accent-color: var(--accent);
+        }
+        .keyboard-visual-setting-item .setting-description {
+            display: block;
+            margin-top: 0.1rem;
+            font-size: 0.6rem;
+            color: var(--surface-text-secondary);
+            line-height: 1.25;
+            letter-spacing: 0.01em;
+        }
+        .keyboard-visual-settings-menu {
+            margin-left: 0.25rem;
+            padding: 0;
+            font-size: 0.75rem;
+            line-height: 1;
+            color: var(--surface-text-secondary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .keyboard-visual-settings-menu:hover { color: var(--surface-text); }
+        .settings-tabs {
+            display: flex;
+            gap: 0.2rem;
+            margin-bottom: 0.6rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--hairline);
+            min-height: 1.75rem;
+            align-items: flex-end;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .settings-tab {
+            padding: 0.35rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            color: var(--surface-text-secondary);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -0.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .settings-tab:hover { color: var(--surface-text); }
+        .settings-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .settings-panel {
+            display: none;
+            padding-top: 0;
+            margin-top: 0;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+        .settings-panel.active { display: block; }
+        .keyboard-visual-setting-item .setting-label-inline { min-width: 3.5rem; font-weight: 500; font-size: 0.7rem; }
+        .keyboard-visual-setting-item select {
+            margin-left: 0.25rem;
+            padding: 0.25rem 0.4rem;
+            font-size: 0.7rem;
+            border: 1px solid var(--hairline);
+            border-radius: 4px;
+            background: var(--surface);
+            color: var(--surface-text);
+        }
+        .keyboard-visual-setting-item select:focus { outline: none; border-color: var(--accent); }
+        .keyboard-visual-setting-item input[type="range"] { flex: 1; min-width: 0; }
+        .settings-master-volume-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--surface-text-secondary); }
+        .settings-piano-brightness-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--surface-text-secondary); }
+
+        /* MIDI Debug — Muji-style panel */
+        #midi-debug-container {
+            position: fixed;
+            top: 48px;
+            right: 14px;
+            width: min(20rem, calc(100vw - 28px));
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 500;
+            display: none;
+            background: var(--surface);
+            color: var(--surface-text);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: var(--modal-shadow);
+            font-size: 0.78rem;
+            letter-spacing: 0.01em;
+            line-height: 1.4;
+        }
+        #midi-debug-container.midi-debug-visible { display: block; }
+        .midi-debug-header {
+            font-weight: 600;
+            margin: 0 0 0.75rem 0;
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid var(--hairline);
+            font-size: 0.8rem;
+            color: var(--surface-text);
+        }
+        .midi-debug-pedal {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0.6rem;
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--hairline);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: var(--surface-text-secondary);
+        }
+        .midi-debug-pedal.on { background: rgba(30, 58, 95, 0.08); color: var(--accent); border-color: rgba(30, 58, 95, 0.2); }
+        .midi-debug-empty { color: var(--surface-text-secondary); font-style: italic; font-size: 0.7rem; }
+        .midi-debug-note {
+            padding: 0.55rem 0.65rem;
+            margin-bottom: 0.5rem;
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--hairline);
+            border-radius: 4px;
+            border-left: 3px solid var(--accent);
+        }
+        .midi-debug-note-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem; }
+        .midi-debug-note-name { font-weight: 600; color: var(--surface-text); font-size: 0.72rem; }
+        .midi-debug-note-meta { font-size: 0.65rem; color: var(--surface-text-secondary); }
+        .midi-debug-vel { font-weight: 600; font-size: 0.75rem; color: var(--accent); }
+        .midi-debug-vel.mid { color: #b8860b; }
+        .midi-debug-vel.high { color: #c44; }
+        .midi-debug-states { display: flex; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.65rem; }
+        .midi-debug-states span { color: var(--surface-text-secondary); }
+        .midi-debug-states span.on { color: var(--accent); }
+        .midi-debug-states span.sustain-on { color: #b8860b; }
+        .midi-debug-detail { margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--hairline); font-size: 0.7rem; color: var(--surface-text-secondary); }
+        .midi-debug-detail strong { color: var(--surface-text); }
+        .midi-debug-detail-line { margin-left: 0.5rem; }
+        .midi-debug-detail-block { margin-top: 0.35rem; }
+        .midi-debug-summary { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--hairline); font-size: 0.7rem; color: var(--surface-text-secondary); }
+
+        /* Sub-popups (Key Movement, Key Labels) — Muji minimal */
+        .key-movement-popup, .key-labels-popup {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 3001;
+            align-items: center;
+            justify-content: center;
+            background: var(--overlay-scrim);
+        }
+        .key-movement-popup.active, .key-labels-popup.active { display: flex; }
+        .key-movement-popup-content, .key-labels-popup-content {
+            background: var(--surface);
+            color: var(--surface-text);
+            border-radius: 8px;
+            padding: 1.5rem 1.75rem;
+            max-width: 20rem;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--modal-shadow);
+            position: relative;
+        }
+        .key-movement-popup-header, .key-labels-popup-header { margin-bottom: 0.75rem; }
+        .key-movement-popup-header h2, .key-labels-popup-header h2 { margin: 0; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em; color: var(--surface-text); }
+        .key-movement-popup-close, .key-labels-popup-close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 2rem;
+            height: 2rem;
+            padding: 0;
+            font-size: 1.1rem;
+            line-height: 1;
+            color: var(--surface-text-secondary);
+            background: none;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+        .key-movement-popup-close:hover, .key-labels-popup-close:hover { color: var(--surface-text); }
+        .key-movement-popup-body, .key-labels-popup-body { display: flex; flex-direction: column; gap: 0.75rem; }
+        .key-movement-setting, .key-labels-setting { display: flex; flex-direction: column; gap: 0.3rem; }
+        .key-movement-setting label, .key-labels-setting label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--surface-text); }
+        .key-movement-setting label span:first-child, .key-labels-setting label span:first-child { min-width: 5.5rem; font-weight: 500; }
+        .key-movement-setting select, .key-labels-setting select {
+            flex: 1;
+            padding: 0.4rem 0.55rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--hairline);
+            border-radius: 4px;
+            background: var(--surface);
+            color: var(--surface-text);
+        }
+        .key-movement-setting select:focus, .key-labels-setting select:focus { outline: none; border-color: var(--accent); }
+        .key-movement-setting input[type="range"] { flex: 1; }
+        .key-labels-setting input[type="checkbox"] { accent-color: var(--accent); }
+        .key-movement-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--surface-text-secondary); }
+        .key-movement-description, .key-labels-description { font-size: 0.7rem; color: var(--surface-text-secondary); line-height: 1.4; margin-top: 0.2rem; }
+        .key-movement-popup-footer, .key-labels-popup-footer { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--hairline); }
+        .key-movement-reset, .key-labels-reset {
+            padding: 0.45rem 0.85rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            color: var(--surface-text);
+            background: transparent;
+            border: 1px solid var(--hairline);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .key-movement-reset:hover, .key-labels-reset:hover { border-color: var(--control-border); background: rgba(0, 0, 0, 0.04); }
+    </style>
+</head>
+<body>
+    <div class="bg-reveal" id="bg-reveal" aria-hidden="true"></div>
+    <div class="overlay">
+        <header class="header">
+            <h1 class="app-logo" id="app-logo">Pri<span class="sc">midi</span></h1>
+            <div class="header-rest" id="header-rest">
+                <div class="toolbar">
+                    <select id="preset-select">
+                        <option value="">Loading…</option>
+                    </select>
+                    <button type="button" id="keyboard-visual-icon" class="toolbar-btn" aria-label="Settings">Settings</button>
+                </div>
+            </div>
+        </header>
+    </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+    <!-- GSL sample-based instruments (presets from instruments/GSL) -->
+    <script src="instruments/instruhandle.js"></script>
+    <script src="audio/gsl-synth.js"></script>
+    <!-- Keyboard Visual & Input Modules -->
+    <script src="keyboard/key-highlight/key-highlight.js"></script>
+    <script src="keyboard/key-movement/key-movement.js"></script>
+    <script src="keyboard/key-labels/key-labels.js"></script>
+    <script src="keyboard/keypress-input/keypress-input.js"></script>
+    <script src="keyboard/keyboard-visual-settings/keyboard-visual-settings.js"></script>
+    <script src="keyboard/midi-debug/midi-debug.js"></script>
+    <!-- MIDI Modules -->
+    <script src="midi/midi-input/midi-input.js"></script>
+    <script src="midi/midi-mapping/midi-mapping.js"></script>
+    <script type="module" src="main.js"></script>
+    <script>
+        // Initialize keyboard visual settings when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Scene: glow in from dark to normal over 4s (no hold)
+            requestAnimationFrame(() => {
+                const bgReveal = document.getElementById('bg-reveal');
+                if (bgReveal) bgReveal.classList.add('revealed');
+            });
+            // Show app logo only after Amarante font is loaded to avoid FOUT (flash of wrong font)
+            const appLogo = document.getElementById('app-logo');
+            if (appLogo && document.fonts && document.fonts.load) {
+                document.fonts.load('1em Amarante').then(() => {
+                    appLogo.classList.add('font-loaded');
+                }).catch(() => {
+                    appLogo.classList.add('font-loaded');
+                });
+                setTimeout(() => { appLogo.classList.add('font-loaded'); }, 2500);
+            } else if (appLogo) {
+                appLogo.classList.add('font-loaded');
+            }
+            // Initialize keyboard visual settings module
+            if (window.initKeyboardVisualSettings) {
+                window.initKeyboardVisualSettings();
+            }
+            
+            // PriMIDI logo: click toggles rest of header (preset, Settings)
+            const headerRest = document.getElementById('header-rest');
+            if (appLogo && headerRest) {
+                appLogo.addEventListener('click', () => headerRest.classList.toggle('visible'));
+            }
+            // Settings button
+            const keyboardVisualIcon = document.getElementById('keyboard-visual-icon');
+            if (keyboardVisualIcon && window.showKeyboardVisualSettings) {
+                keyboardVisualIcon.addEventListener('click', () => {
+                    window.showKeyboardVisualSettings();
+                });
+            }
+            
+            // View 0: Front horizontal — position + target only; OrbitControls gives level view, no special case
+            const cameraView0 = {
+                position: { x: 0, y: 0.5, z: 1.8 },
+                target: { x: 0, y: 0, z: 0 }
+            };
+            
+            // View 1
+            const cameraView1 = {
+                position: { x: 0.750, y: 1.326, z: 1.407 },
+                rotation: { x: -0.756, y: 0.370, z: 0.328 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 2: Third camera settings
+            const cameraView2 = {
+                position: { x: 0.000, y: 1.060, z: 2.382 },
+                rotation: { x: -0.419, y: 0.000, z: 0.000 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 3: Fourth camera settings
+            const cameraView3 = {
+                position: { x: -0.808, y: 1.398, z: 1.652 },
+                rotation: { x: -0.702, y: -0.357, z: -0.288 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 4: Fifth camera settings
+            const cameraView4 = {
+                position: { x: 2.302, y: 1.176, z: -0.018 },
+                rotation: { x: -1.586, y: 1.098, z: 1.588 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // Camera view 5: Sixth camera settings
+            const cameraView5 = {
+                position: { x: 0.003, y: 3.821, z: 2.390 },
+                rotation: { x: -1.012, y: 0.001, z: 0.001 },
+                target: { x: 0.000, y: 0.000, z: 0.000 }
+            };
+            
+            // View 6: Hero / product shot — front three-quarter, slightly low
+            const cameraView6 = {
+                position: { x: 1.18, y: 0.48, z: 1.32 },
+                target: { x: 0, y: 0.02, z: 0 }
+            };
+            
+            // View 7: Bird's eye from top (captured with keypress C)
+            const cameraView7 = {
+                position: { x: -0.07, y: 3.407, z: -0.862 },
+                target: { x: -0.07, y: 0, z: -0.862 }
+            };
+            
+            // View 8: Front center (page load start)
+            const cameraView8 = {
+                position: { x: 0, y: 0, z: 2.588 },
+                target: { x: 0, y: 0, z: 0 }
+            };
+            
+            // View 9 (captured with keypress C)
+            const cameraView9 = {
+                position: { x: 3.212, y: 0.32, z: 0.329 },
+                target: { x: 0.271, y: -0.368, z: -0.909 }
+            };
+            
+            // View 10 (captured with keypress C)
+            const cameraView10 = {
+                position: { x: -4.329, y: 0.336, z: -0.043 },
+                target: { x: -0.144, y: -0.587, z: 0.328 }
+            };
+            
+            // View 11: default on page load (captured with keypress C)
+            const cameraView11 = {
+                position: { x: -0.135, y: -0.145, z: -4 },
+                target: { x: -0.07, y: 0, z: -1.2 }
+            };
+            
+            const cameraViews = [cameraView0, cameraView1, cameraView2, cameraView3, cameraView4, cameraView5, cameraView6, cameraView7, cameraView8, cameraView9, cameraView10, cameraView11];
+            const DEFAULT_CAMERA_VIEW_INDEX = 2;
+
+            // Apply a view (position + target) to the camera. Used for initial load and by dropdown.
+            function applyCameraView(viewIndex) {
+                if (!window.camera || !window.controls || viewIndex < 0 || viewIndex >= cameraViews.length) return;
+                var v = cameraViews[viewIndex];
+                window.camera.position.set(v.position.x, v.position.y, v.position.z);
+                window.controls.target.set(v.target.x, v.target.y, v.target.z);
+                window.controls.update();
+            }
+            window.applyCameraView = applyCameraView;
+
+            // Initial view = view 2 (single source of truth; no hardcoding in main.js).
+            window.currentCameraViewIndex = DEFAULT_CAMERA_VIEW_INDEX;
+            applyCameraView(DEFAULT_CAMERA_VIEW_INDEX);
+
+            // Idle orbit: slow rotation around current look-at. When toggled ON (R), uses current camera position/target so it works from any view.
+            var v2 = cameraViews[DEFAULT_CAMERA_VIEW_INDEX];
+            var r = Math.sqrt((v2.position.x * v2.position.x) + (v2.position.z * v2.position.z)) || 2.4;
+            var h = (v2.position.y !== undefined) ? v2.position.y : 1.06;
+            window.cameraIdleOrbit = {
+                active: true,
+                angle: 0,
+                radius: r,
+                height: h,
+                speed: 0.08,
+                targetX: 0,
+                targetY: 0,
+                targetZ: 0
+            };
+
+            // Click on piano (canvas): jump to next camera view. If orbit is on, sync orbit to new view so it keeps rotating from there.
+            window.cycleToNextCameraView = function() {
+                if (!window.camera || !window.controls || !cameraViews.length) return;
+                var current = (typeof window.currentCameraViewIndex === 'number') ? window.currentCameraViewIndex : 0;
+                var next = (current + 1) % cameraViews.length;
+                window.currentCameraViewIndex = next;
+                applyCameraView(next);
+                if (window.cameraIdleOrbit && window.cameraIdleOrbit.active && window.camera && window.controls) {
+                    var o = window.cameraIdleOrbit;
+                    var t = window.controls.target;
+                    var p = window.camera.position;
+                    o.targetX = t.x;
+                    o.targetY = t.y;
+                    o.targetZ = t.z;
+                    var dx = p.x - t.x, dz = p.z - t.z;
+                    o.radius = Math.sqrt(dx * dx + dz * dz) || 2.4;
+                    o.height = p.y;
+                    o.angle = Math.atan2(dx, dz);
+                    var currentSpeed = Math.abs(o.speed) || 0.08;
+                    var newSpeed = currentSpeed * (0.5 + Math.random() * 0.5);
+                    if (Math.random() < 0.33) newSpeed = -newSpeed;
+                    o.speed = newSpeed;
+                }
+            };
+            
+            // Preset dropdown handler
+            const presetSelect = document.getElementById('preset-select');
+            if (presetSelect) {
+                // Track the value before it gets cleared
+                let pendingSelection = null;
+                
+                // Use input event which fires when selection changes - process preset here directly
+                presetSelect.addEventListener('input', function(e) {
+                    const selectedIndex = e.target.selectedIndex;
+                    const presetName = selectedIndex >= 0 && selectedIndex < e.target.options.length 
+                        ? e.target.options[selectedIndex].value 
+                        : (e.target.value || null);
+                    
+                    if (presetName) {
+                        pendingSelection = presetName;
+                        // Process the preset immediately in input event
+                        processPresetSelection(presetName);
+                    }
+                });
+                
+                // Function to process preset selection
+                function processPresetSelection(presetName) {
+                    if (!presetName) return;
+                    
+                    console.log(`Dropdown changed to: ${presetName}`);
+                    
+                    // Store the value FIRST to preserve it
+                    const selectedValue = presetName;
+                    
+                    // Function to apply preset (with retry logic)
+                    function tryApplyPreset() {
+                        if (window.applySoundPreset) {
+                            console.log('Calling applySoundPreset...');
+                            
+                            try {
+                                window.applySoundPreset(selectedValue);
+                            } catch (error) {
+                                console.error('Error calling applySoundPreset:', error);
+                            }
+                            
+                            // Ensure dropdown value stays
+                            if (presetSelect.value !== selectedValue) {
+                                presetSelect.value = selectedValue;
+                            }
+                        } else {
+                            console.warn('applySoundPreset not available yet, retrying...');
+                            setTimeout(tryApplyPreset, 100);
+                        }
+                    }
+                    
+                    // Try to apply preset
+                    tryApplyPreset();
+                    
+                    // Also ensure value is preserved after a delay
+                    setTimeout(() => {
+                        if (presetSelect.value !== selectedValue) {
+                            presetSelect.value = selectedValue;
+                        }
+                    }, 200);
+                }
+                
+                // Also handle change event as fallback (but input should fire first)
+                presetSelect.addEventListener('change', function(e) {
+                    // Only process if we didn't already process via input event
+                    if (pendingSelection) {
+                        // Already processed in input event, just clear the flag
+                        pendingSelection = null;
+                        return;
+                    }
+                    
+                    // Fallback: try to get value if input event didn't fire
+                    const selectedIndex = e.target.selectedIndex;
+                    const presetName = selectedIndex >= 0 && selectedIndex < e.target.options.length 
+                        ? e.target.options[selectedIndex].value 
+                        : (e.target.value || null);
+                    
+                    if (presetName) {
+                        processPresetSelection(presetName);
+                    }
+                });
+            }
+            
+            // Keyboard shortcut: 9 to log camera settings (for debug and future use)
+            window.addEventListener('keydown', (e) => {
+                if (e.key === '9' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    if (window.camera && window.controls) {
+                        const camera = window.camera;
+                        const controls = window.controls;
+                        const cameraSettings = {
+                            position: {
+                                x: camera.position.x.toFixed(3),
+                                y: camera.position.y.toFixed(3),
+                                z: camera.position.z.toFixed(3)
+                            },
+                            rotation: {
+                                x: camera.rotation.x.toFixed(3),
+                                y: camera.rotation.y.toFixed(3),
+                                z: camera.rotation.z.toFixed(3)
+                            },
+                            fov: camera.fov,
+                            aspect: camera.aspect,
+                            near: camera.near,
+                            far: camera.far,
+                            target: {
+                                x: controls.target.x.toFixed(3),
+                                y: controls.target.y.toFixed(3),
+                                z: controls.target.z.toFixed(3)
+                            },
+                            minDistance: controls.minDistance,
+                            maxDistance: controls.maxDistance,
+                            enableDamping: controls.enableDamping,
+                            dampingFactor: controls.dampingFactor,
+                            enableRotate: controls.enableRotate,
+                            enableZoom: controls.enableZoom,
+                            enablePan: controls.enablePan
+                        };
+                        console.log('📷 Camera Settings:', cameraSettings);
+                        console.log('📋 Copy-paste format:', JSON.stringify(cameraSettings, null, 2));
+                    } else {
+                        console.warn('Camera or controls not available yet');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

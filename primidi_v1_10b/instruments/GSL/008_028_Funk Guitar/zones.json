@@ -1,0 +1,90 @@
+[
+  {
+    "keyLow": 0,
+    "keyHigh": 34,
+    "originalPitchCents": 3284,
+    "file": "zone_0_midi0_keys_0-34.wav",
+    "loopStart": 0.379678785,
+    "loopEnd": 0.3976883274
+  },
+  {
+    "keyLow": 35,
+    "keyHigh": 41,
+    "originalPitchCents": 3963,
+    "file": "zone_1_midi0_keys_35-41.wav",
+    "loopStart": 0.02,
+    "loopEnd": 0.0333333333
+  },
+  {
+    "keyLow": 42,
+    "keyHigh": 47,
+    "originalPitchCents": 4490,
+    "file": "zone_2_midi0_keys_42-47.wav",
+    "loopStart": 0.9694,
+    "loopEnd": 1.02368
+  },
+  {
+    "keyLow": 48,
+    "keyHigh": 52,
+    "originalPitchCents": 4992,
+    "file": "zone_3_midi0_keys_48-52.wav",
+    "loopStart": 1.36808,
+    "loopEnd": 1.42232
+  },
+  {
+    "keyLow": 53,
+    "keyHigh": 57,
+    "originalPitchCents": 5496,
+    "file": "zone_4_midi0_keys_53-57.wav",
+    "loopStart": 1.66172,
+    "loopEnd": 1.72284
+  },
+  {
+    "keyLow": 58,
+    "keyHigh": 62,
+    "originalPitchCents": 5896,
+    "file": "zone_5_midi0_keys_58-62.wav",
+    "loopStart": 1.1308,
+    "loopEnd": 1.1914
+  },
+  {
+    "keyLow": 63,
+    "keyHigh": 68,
+    "originalPitchCents": 6696,
+    "file": "zone_6_midi0_keys_63-68.wav",
+    "loopStart": 1.03388,
+    "loopEnd": 1.09496
+  },
+  {
+    "keyLow": 69,
+    "keyHigh": 75,
+    "originalPitchCents": 6997,
+    "file": "zone_7_midi0_keys_69-75.wav",
+    "loopStart": 0.7144,
+    "loopEnd": 0.77224
+  },
+  {
+    "keyLow": 76,
+    "keyHigh": 83,
+    "originalPitchCents": 8100,
+    "file": "zone_8_midi0_keys_76-83.wav",
+    "loopStart": 0.0017272727,
+    "loopEnd": 0.0028636364
+  },
+  {
+    "keyLow": 84,
+    "keyHigh": 92,
+    "originalPitchCents": 8763,
+    "file": "zone_9_midi0_keys_84-92.wav",
+    "loopStart": 0.00125,
+    "loopEnd": 0.0020833333
+  },
+  {
+    "keyLow": 93,
+    "keyHigh": 127,
+    "originalPitchCents": 11163,
+    "file": "zone_10_midi0_keys_93-127.wav",
+    "loopStart": 0.0007291667,
+    "loopEnd": 0.0011458333
+  }
+]

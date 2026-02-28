@@ -1630,20 +1630,23 @@ document.addEventListener('click', () => {
         initializeSynth();
         initializeMidiMapping();
     }
-    if (synth && synth.synth && synth.synth.audioCtx) {
-        if (synth.synth.audioCtx.state !== 'running') {
-            synth.synth.audioCtx.resume();
+    var ctx = synth && synth.synth && synth.synth.audioCtx;
+    function afterAudioReady() {
+        initializeMidiInput();
+        initializeKeypressInput();
+        if (window.populateGslPresetDropdown) {
+            window.populateGslPresetDropdown();
+        }
+        if (window.cameraIdleOrbit) window.cameraIdleOrbit.active = false;
+        if (window.applyCameraView) {
+            window.currentCameraViewIndex = 5;
+            window.applyCameraView(5);
         }
     }
-    initializeMidiInput();
-    initializeKeypressInput();
-    if (window.populateGslPresetDropdown) {
-        window.populateGslPresetDropdown();
-    }
-    if (window.cameraIdleOrbit) window.cameraIdleOrbit.active = false;
-    if (window.applyCameraView) {
-        window.currentCameraViewIndex = 5;
-        window.applyCameraView(5);
+    if (ctx && ctx.state !== 'running') {
+        ctx.resume().then(afterAudioReady).catch(afterAudioReady);
+    } else {
+        afterAudioReady();
     }
 }, { once: true });
 
@@ -2171,24 +2174,31 @@ function populateGslPresetDropdown() {
     if (!handler || typeof handler.ensureGslManifest !== 'function') return Promise.resolve();
     return handler.ensureGslManifest().then(function (list) {
         const sel = document.getElementById('preset-select');
-        if (!sel || !list || !list.length) return;
-        sel.innerHTML = '';
-        list.forEach(function (entry) {
-            const opt = document.createElement('option');
-            opt.value = entry.slug;
-            // Use optional label, else show name without leading "xxx_xxx_" (e.g. "000_055_Orchestra Hit" → "Orchestra Hit")
-            const displayName = (entry.label && typeof entry.label === 'string')
-                ? entry.label
-                : (entry.id && typeof entry.id === 'string')
-                    ? entry.id.replace(/^\d+_\d+_\s*/, '')
-                    : entry.id;
-            opt.textContent = displayName || entry.slug;
-            sel.appendChild(opt);
-        });
+        if (!list || !list.length) return;
+        if (sel) {
+            sel.innerHTML = '';
+            list.forEach(function (entry) {
+                const opt = document.createElement('option');
+                opt.value = entry.slug;
+                const displayName = (entry.label && typeof entry.label === 'string')
+                    ? entry.label
+                    : (entry.id && typeof entry.id === 'string')
+                        ? entry.id.replace(/^\d+_\d+_\s*/, '')
+                        : entry.id;
+                opt.textContent = displayName || entry.slug;
+                sel.appendChild(opt);
+            });
+        }
         const defaultSlug = list.some(function (e) { return e.slug === 'gsl_piano'; }) ? 'gsl_piano' : list[0].slug;
         window.currentGslPreset = defaultSlug;
-        sel.value = defaultSlug;
+        if (sel) sel.value = defaultSlug;
         startBackgroundPreloadCurrentPreset();
+        if (window.applySoundPreset) window.applySoundPreset(defaultSlug);
+        var gridContainer = document.getElementById('instrument-grid-container');
+        if (gridContainer) {
+            gridContainer.querySelectorAll('.instrument-item.selected').forEach(function (el) { el.classList.remove('selected'); });
+            gridContainer.querySelectorAll('.instrument-item[data-slug="' + defaultSlug + '"]').forEach(function (el) { el.classList.add('selected'); });
+        }
     }).catch(function () {});
 }
 
