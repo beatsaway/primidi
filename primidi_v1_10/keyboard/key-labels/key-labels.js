@@ -13,7 +13,7 @@
         alwaysVisible: false, // Alternative: always show labels
         showNone: false, // If true, labels never shown (Visibility Mode: Show None)
         blackKeyLabelMode: 'both', // Options: 'sharp', 'flat', 'both' - Default: both
-        labelDisplayMode: 'stickers', // 'stickers' = texture labels only, 'tags' = div labels only, 'both'
+        labelDisplayMode: 'tags', // 'stickers' = texture labels only, 'tags' = div labels only, 'both'
         labelFormat: 'noteOnly' // 'withOctave' = A3, B2, C1; 'noteOnly' = A, B, C (default)
     };
 
@@ -198,30 +198,20 @@
         if (!labelMesh || !labelMesh.material) return;
         
         const originalData = labelOriginalData.get(midiNote);
-        if (!originalData) {
-            // Try to get from userData
-            const text = labelMesh.userData.originalText || '';
-            const fontSize = labelMesh.userData.fontSize || 100;
-            const planeSize = labelMesh.userData.planeSize || 0.12;
-            const planeHeight = labelMesh.userData.planeHeight || null;
-            
-            if (!text) {
-                console.warn('Cannot update label color - no original data for note', midiNote);
-                return;
-            }
-            
-            // Create new texture with new color
-            if (typeof window !== 'undefined' && window.THREE && window.createTextTexture) {
-                const newTexture = window.createTextTexture(text, color, fontSize);
-                labelMesh.material.map = newTexture;
-                labelMesh.material.needsUpdate = true;
-            }
+        const fontSize = (originalData && originalData.fontSize) || (labelMesh.userData && labelMesh.userData.fontSize) || 100;
+        // Use current format (note only vs note+octave) so stickers respect Key Labels Format setting
+        const displayText = (window.getKeyLabelDisplayText && window.getKeyLabelDisplayText(midiNote)) ||
+            (originalData && originalData.text) ||
+            (labelMesh.userData && labelMesh.userData.originalText) ||
+            '';
+        
+        if (!displayText) {
+            console.warn('Cannot update label color - no text for note', midiNote);
             return;
         }
         
-        // Recreate texture with new color
         if (typeof window !== 'undefined' && window.THREE && window.createTextTexture) {
-            const newTexture = window.createTextTexture(originalData.text, color, originalData.fontSize);
+            const newTexture = window.createTextTexture(displayText, color, fontSize);
             labelMesh.material.map = newTexture;
             labelMesh.material.needsUpdate = true;
         }

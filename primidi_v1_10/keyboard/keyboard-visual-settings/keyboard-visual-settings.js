@@ -60,7 +60,7 @@
                         <input type="checkbox" id="enable-key-movement" checked>
                         <div>
                             <strong>Key movement</strong>
-                            <button type="button" class="keyboard-visual-settings-menu" id="key-movement-settings-btn" aria-label="More options">››</button>
+                            <button type="button" class="keyboard-visual-settings-menu camera-help-btn" id="key-movement-settings-btn" aria-label="More options">?</button>
                         </div>
                     </label>
                 </div>
@@ -69,7 +69,7 @@
                         <input type="checkbox" id="enable-key-labels" checked>
                         <div>
                             <strong>Key labels</strong>
-                            <button type="button" class="keyboard-visual-settings-menu" id="key-labels-settings-btn" aria-label="More options">››</button>
+                            <button type="button" class="keyboard-visual-settings-menu camera-help-btn" id="key-labels-settings-btn" aria-label="More options">?</button>
                         </div>
                     </label>
                 </div>
@@ -232,7 +232,8 @@
         // Key movement settings button
         const movementSettingsBtn = document.getElementById('key-movement-settings-btn');
         if (movementSettingsBtn) {
-            movementSettingsBtn.addEventListener('click', () => {
+            movementSettingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 openKeyMovementSettings();
             });
         }
@@ -252,7 +253,8 @@
         // Key labels settings button
         const labelsSettingsBtn = document.getElementById('key-labels-settings-btn');
         if (labelsSettingsBtn) {
-            labelsSettingsBtn.addEventListener('click', () => {
+            labelsSettingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 openKeyLabelsSettings();
             });
         }
@@ -515,8 +517,8 @@
                         <label>
                             <span>Display</span>
                             <select id="key-labels-display-mode">
-                                <option value="stickers" selected>Show key stickers</option>
-                                <option value="tags">Show key tags</option>
+                                <option value="tags" selected>Show key tags</option>
+                                <option value="stickers">Show key stickers</option>
                                 <option value="both">Show both</option>
                             </select>
                         </label>
@@ -626,7 +628,7 @@
             }
             const displayModeSelect = document.getElementById('key-labels-display-mode');
             if (displayModeSelect) {
-                displayModeSelect.value = window.keyLabelSettings.labelDisplayMode || 'stickers';
+                displayModeSelect.value = window.keyLabelSettings.labelDisplayMode || 'tags';
             }
             popup.classList.add('active');
         }
@@ -641,7 +643,7 @@
         window.keyLabelSettings.showNone = false;
         window.keyLabelSettings.blackKeyLabelMode = 'both';
         window.keyLabelSettings.labelFormat = 'noteOnly';
-        window.keyLabelSettings.labelDisplayMode = 'stickers';
+        window.keyLabelSettings.labelDisplayMode = 'tags';
         
         // Update UI
         const visibilitySelect = document.getElementById('key-labels-visibility');
@@ -652,7 +654,7 @@
         if (visibilitySelect) visibilitySelect.value = 'pressed';
         if (blackKeyModeSelect) blackKeyModeSelect.value = 'both';
         if (formatSelect) formatSelect.value = 'noteOnly';
-        if (displayModeSelect) displayModeSelect.value = 'stickers';
+        if (displayModeSelect) displayModeSelect.value = 'tags';
         if (window.updateDivLabelsVisibility) window.updateDivLabelsVisibility();
         if (window.updateAllKeyLabels) window.updateAllKeyLabels();
         if (window.updateBlackKeyLabels) window.updateBlackKeyLabels();

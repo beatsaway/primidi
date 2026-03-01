@@ -369,6 +369,49 @@
         .keyboard-visual-setting-item select:focus { outline: none; border-color: var(--popup-accent); box-shadow: 0 0 0 2px var(--popup-accent-subtle); }
         .keyboard-visual-setting-item input[type="range"] { flex: 1; min-width: 0; }
         .settings-master-volume-value { min-width: 2.75rem; text-align: right; font-size: 0.75rem; color: var(--popup-text-secondary); }
+        .camera-help-wrap label { flex-wrap: nowrap; }
+        .camera-help-btn { margin-left: 0.35rem; width: 1.25rem; height: 1.25rem; padding: 0; font-size: 0.7rem; font-weight: 600; color: var(--popup-text-secondary); background: transparent; border: 1px solid var(--popup-border-strong); border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: color 0.2s, border-color 0.2s; }
+        .camera-help-btn:hover { color: var(--popup-accent); border-color: var(--popup-accent); }
+        /* Camera help: full-screen overlay popup (same pattern as key-movement-popup) */
+        .camera-help-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 3001;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.32);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .camera-help-overlay.visible { display: flex; }
+        .camera-help-overlay-content {
+            background: var(--popup-surface);
+            color: var(--popup-text);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            max-width: 22rem;
+            width: 90%;
+            box-shadow: var(--popup-shadow-card);
+            position: relative;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .camera-help-overlay-title { font-weight: 600; margin: 0 0 0.5rem 0; font-size: 1.05rem; }
+        .camera-help-overlay p { margin: 0 0 1rem 0; color: var(--popup-text-secondary); }
+        .camera-help-overlay-close {
+            display: block;
+            margin-left: auto;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--popup-accent);
+            background: var(--popup-accent-subtle);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .camera-help-overlay-close:hover { background: rgba(13, 148, 136, 0.2); }
 
         /* MIDI Debug — Muji-style panel */
         #midi-debug-container {
@@ -885,10 +928,10 @@
                         <label><input type="checkbox" id="enable-key-highlight"><div><strong>Key highlight</strong></div></label>
                     </div>
                     <div class="keyboard-visual-setting-item">
-                        <label><input type="checkbox" id="enable-key-movement" checked><div><strong>Key movement</strong><button type="button" class="keyboard-visual-settings-menu" id="key-movement-settings-btn" aria-label="More options">››</button></div></label>
+                        <label><input type="checkbox" id="enable-key-movement" checked><div><strong>Key movement</strong><button type="button" class="keyboard-visual-settings-menu camera-help-btn" id="key-movement-settings-btn" aria-label="More options">?</button></div></label>
                     </div>
                     <div class="keyboard-visual-setting-item">
-                        <label><input type="checkbox" id="enable-key-labels" checked><div><strong>Key labels</strong><button type="button" class="keyboard-visual-settings-menu" id="key-labels-settings-btn" aria-label="More options">››</button></div></label>
+                        <label><input type="checkbox" id="enable-key-labels" checked><div><strong>Key labels</strong><button type="button" class="keyboard-visual-settings-menu camera-help-btn" id="key-labels-settings-btn" aria-label="More options">?</button></div></label>
                     </div>
                     <div class="keyboard-visual-setting-item">
                         <label><input type="checkbox" id="enable-midi-input" checked><div><strong>MIDI input</strong></div></label>
@@ -899,9 +942,8 @@
                     <div class="keyboard-visual-setting-item">
                         <label><input type="checkbox" id="enable-midi-debug"><div><strong>MIDI monitor</strong></div></label>
                     </div>
-                    <div class="display-section-divider"></div>
-                    <div class="keyboard-visual-setting-item">
-                        <p class="settings-about-content" style="margin:0; font-size:14px;"><strong>Camera</strong> — Spacebar cycles views; R orbits the camera.</p>
+                    <div class="keyboard-visual-setting-item camera-help-wrap">
+                        <label><input type="checkbox" id="camera-enabled" checked><div><strong>Camera Control</strong></div><button type="button" class="keyboard-visual-settings-menu camera-help-btn" id="camera-help-btn" aria-label="What Camera Control does">?</button></label>
                     </div>
                 </div>
                 <div id="settings-panel-sound" class="settings-panel">
@@ -921,6 +963,14 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    <!-- Camera Control help: overlay popup (click ? next to Camera Control) -->
+    <div class="camera-help-overlay" id="camera-help-overlay" role="dialog" aria-label="Camera Control" aria-modal="true">
+        <div class="camera-help-overlay-content">
+            <h2 class="camera-help-overlay-title">Camera Control</h2>
+            <p>Spacebar: cycle camera views. R: toggle orbit around piano.</p>
+            <button type="button" class="camera-help-overlay-close" id="camera-help-overlay-close">OK</button>
         </div>
     </div>
     <script type="importmap">
@@ -1254,6 +1304,42 @@
                     }
                 }
             });
+
+            // Camera: one checkbox (enables Spacebar + R); ? button shows overlay popup (window.cameraSettings set in main.js)
+            var camEnabled = document.getElementById('camera-enabled');
+            var camHelpBtn = document.getElementById('camera-help-btn');
+            if (window.cameraSettings) {
+                if (camEnabled) {
+                    camEnabled.checked = !!(window.cameraSettings.spacebarCyclesViews && window.cameraSettings.rOrbitsCamera);
+                    camEnabled.addEventListener('change', function () {
+                        var on = camEnabled.checked;
+                        window.cameraSettings.spacebarCyclesViews = on;
+                        window.cameraSettings.rOrbitsCamera = on;
+                        if (!on && window.cameraIdleOrbit) window.cameraIdleOrbit.active = false;
+                    });
+                }
+                if (camHelpBtn) {
+                    var camHelpOverlay = document.getElementById('camera-help-overlay');
+                    var camHelpOverlayClose = document.getElementById('camera-help-overlay-close');
+                    function closeCameraHelp() {
+                        if (camHelpOverlay) camHelpOverlay.classList.remove('visible');
+                    }
+                    camHelpBtn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (camHelpOverlay) camHelpOverlay.classList.add('visible');
+                    });
+                    if (camHelpOverlayClose) camHelpOverlayClose.addEventListener('click', closeCameraHelp);
+                    if (camHelpOverlay) {
+                        camHelpOverlay.addEventListener('click', function (e) {
+                            if (e.target === camHelpOverlay) closeCameraHelp();
+                        });
+                    }
+                    document.addEventListener('keydown', function (e) {
+                        if (e.key === 'Escape' && camHelpOverlay && camHelpOverlay.classList.contains('visible')) closeCameraHelp();
+                    });
+                }
+            }
         });
     </script>
 </body>

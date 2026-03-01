@@ -6,6 +6,7 @@ import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/exampl
 if (typeof window !== 'undefined') {
     window.THREE = THREE;
     window.pianoBrightness = 0.01; // 1% at start; ramp 1%→100% over 4s then slider
+    window.cameraSettings = window.cameraSettings || { spacebarCyclesViews: true, rOrbitsCamera: true };
 }
 
 // Create scene
@@ -437,7 +438,7 @@ window.getBlackKeyDivLabelText = function(midiNote) {
 // Get the label text to show on a key (sticker or tag) based on Format: withOctave (A3, C1) or noteOnly (A, B, C).
 window.getKeyLabelDisplayText = function(midiNote) {
     const keyData = keyMap.get(midiNote);
-    const format = (window.keyLabelSettings && window.keyLabelSettings.labelFormat) || 'withOctave';
+    const format = (window.keyLabelSettings && window.keyLabelSettings.labelFormat) || 'noteOnly';
     const withOctave = (format === 'withOctave');
     const fullName = midiNoteToNoteName(midiNote);
     if (!keyData || !keyData.isBlack) {
@@ -554,8 +555,8 @@ window.updateBlackKeyLabelsFromMain = function(mode) {
             // Find the label mesh for this MIDI note
             const labelMesh = window.getAllKeyLabels ? window.getAllKeyLabels().get(midiNote) : null;
             if (labelMesh && labelMesh.userData.currentNote && labelMesh.userData.nextNote) {
-                // Get new label text based on mode
-                const newLabelText = getBlackKeyLabel(labelMesh.userData.currentNote, labelMesh.userData.nextNote, labelMode);
+                // Use getKeyLabelDisplayText so Format (note only vs note+octave) is respected
+                const newLabelText = window.getKeyLabelDisplayText ? window.getKeyLabelDisplayText(midiNote) : getBlackKeyLabel(labelMesh.userData.currentNote, labelMesh.userData.nextNote, labelMode);
                 
                 // Update the label texture
                 if (window.updateLabelColor && window.createTextTexture) {
@@ -1650,10 +1651,12 @@ document.addEventListener('click', () => {
     }
 }, { once: true });
 
-// Spacebar: cycle to next camera view
+// Spacebar: cycle to next camera view (when enabled in Display > Camera)
 window.addEventListener('keydown', (event) => {
     if (event.code === 'Space' || event.key === ' ') {
         if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable)) return;
+        const allow = (window.cameraSettings && window.cameraSettings.spacebarCyclesViews);
+        if (!allow) return;
         event.preventDefault();
         if (window.cycleToNextCameraView) window.cycleToNextCameraView();
     }
@@ -1663,14 +1666,15 @@ window.addEventListener('keydown', (event) => {
 // Note: Synth will be initialized on first user click
 console.log('Click anywhere to enable MIDI and audio');
 
-// Keyboard shortcut to release all stuck notes (press 'R' key)
+// Keyboard shortcut to release all stuck notes (press 'R' key); R also toggles orbit when enabled in Display > Camera
 window.addEventListener('keydown', (event) => {
     if (event.key === 'r' || event.key === 'R') {
         if (event.shiftKey) {
             releaseAllNotes();
             console.log('Released all notes (Shift+R)');
         } else {
-            if (window.cameraIdleOrbit && window.camera && window.controls) {
+            const rOrbitsEnabled = (window.cameraSettings && window.cameraSettings.rOrbitsCamera);
+            if (rOrbitsEnabled && window.cameraIdleOrbit && window.camera && window.controls) {
                 const o = window.cameraIdleOrbit;
                 o.active = !o.active;
                 if (o.active) {
@@ -1690,8 +1694,8 @@ window.addEventListener('keydown', (event) => {
         }
         return;
     }
-    // Press 'C' to capture current camera (position + target) for pasting into a view
-    if (event.key === 'c' || event.key === 'C') {
+    // Press 'C' (no modifiers) to capture current camera (position + target) for pasting into a view. Ctrl+C = normal copy.
+    if ((event.key === 'c' || event.key === 'C') && !event.ctrlKey && !event.altKey && !event.metaKey) {
         if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable)) return;
         if (!window.camera || !window.controls) return;
         const p = window.camera.position;
