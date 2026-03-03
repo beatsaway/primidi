@@ -2195,20 +2195,19 @@ function populateGslPresetDropdown() {
         }
         const defaultSlug = list.some(function (e) { return e.slug === 'gsl_piano'; }) ? 'gsl_piano' : list[0].slug;
         window.currentGslPreset = defaultSlug;
+        window.gslPresetSlots = [defaultSlug];
+        window.gslSlotVolumes = [defaultSlug === 'gsl_piano' ? 100 : 33, 33, 33];
         if (sel) sel.value = defaultSlug;
-        startBackgroundPreloadCurrentPreset();
+        startBackgroundPreloadSlots();
         if (window.applySoundPreset) window.applySoundPreset(defaultSlug);
         var gridContainer = document.getElementById('instrument-grid-container');
-        if (gridContainer) {
-            gridContainer.querySelectorAll('.instrument-item.selected').forEach(function (el) { el.classList.remove('selected'); });
-            gridContainer.querySelectorAll('.instrument-item[data-slug="' + defaultSlug + '"]').forEach(function (el) { el.classList.add('selected'); });
-        }
+        if (gridContainer && window.updateInstrumentGridSelection) window.updateInstrumentGridSelection();
+        if (window.updateSoundLayerVolumesUI) window.updateSoundLayerVolumesUI();
     }).catch(function () {});
 }
 
 /**
  * Preload the currently chosen preset's note samples in the background (non-blocking).
- * Call after user has started the audio context (e.g. first click). Good strategy: fewer missed notes.
  */
 function startBackgroundPreloadCurrentPreset() {
     const preset = window.currentGslPreset;
@@ -2221,7 +2220,22 @@ function startBackgroundPreloadCurrentPreset() {
 }
 
 /**
- * Apply a sound preset (GSL only).
+ * Preload all presets in the instrument slots (up to 3 layers).
+ */
+function startBackgroundPreloadSlots() {
+    const slots = window.gslPresetSlots;
+    if (!slots || !slots.length) return;
+    const handler = window.InstrumentSampleHandler;
+    const ctx = window.synth && window.synth.synth && window.synth.synth.audioCtx;
+    if (!handler || !ctx) return;
+    const baseUrl = (document.baseURI || window.location.href || '').replace(/\/[^/]*$/, '/');
+    slots.forEach(function (preset) {
+        handler.ensurePresetLoaded(ctx, preset, baseUrl).catch(function (e) { console.warn('Preset preload:', e); });
+    });
+}
+
+/**
+ * Apply a sound preset (GSL only). Sets slot 0 to this preset (single-instrument mode).
  */
 function applySoundPreset(presetName) {
     if (!presetName) return;
@@ -2229,9 +2243,14 @@ function applySoundPreset(presetName) {
     const isGsl = handler && handler.isGslPreset && handler.isGslPreset(presetName);
     if (isGsl) {
         window.currentGslPreset = presetName;
-        startBackgroundPreloadCurrentPreset();
+        window.gslPresetSlots = [presetName];
+        window.gslSlotVolumes = [presetName === 'gsl_piano' ? 100 : 33, 33, 33];
+        startBackgroundPreloadSlots();
         const presetSelect = document.getElementById('preset-select');
         if (presetSelect) presetSelect.value = presetName;
+        var gridContainer = document.getElementById('instrument-grid-container');
+        if (gridContainer && window.updateInstrumentGridSelection) window.updateInstrumentGridSelection();
+        if (window.updateSoundLayerVolumesUI) window.updateSoundLayerVolumesUI();
     }
 }
 
@@ -2311,6 +2330,7 @@ function applyPianoBrightness() {
 if (typeof window !== 'undefined') {
     window.applyPianoBrightness = applyPianoBrightness;
     window.applySoundPreset = applySoundPreset;
+    window.startBackgroundPreloadSlots = startBackgroundPreloadSlots;
     window.populateGslPresetDropdown = populateGslPresetDropdown;
     window.soundPresets = soundPresets;
     window.defaultSoundProfile = defaultSoundProfile;

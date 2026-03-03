@@ -24,6 +24,13 @@
   var lastMasterVolumePercent = 1000; // 0–2000, default 1000%
   var activeVoices = {}; // noteName -> [{ gain, bufferSource, release }]
   var SAMPLE_ENVELOPE = { attack: 0.02, decay: 0.15, sustain: 0.6, release: 0.3 };
+  var DELAY_MOD_CHANCE = 0.618;
+  var DELAY_MOD_AMOUNT_HUMAN = 0.05;
+  var DELAY_MOD_AMOUNT_DRUNK = 0.128;
+  var REF_NOTE_DURATION_FOR_DELAY = 0.25;
+  /* Per-layer phase offsets so pseudo-random delays don't match across layers (same key = different delay each layer) */
+  var delayStateBySlot = { 0: { counter: 0 }, 1: { counter: 317 }, 2: { counter: 733 } };
+  var flickerStateBySlot = { 0: { counter: 0 }, 1: { counter: 0 }, 2: { counter: 0 } };
 
   function createImpulseResponse(ctx, seconds, decay) {
     var length = Math.floor(ctx.sampleRate * seconds);
@@ -105,12 +112,40 @@
   }
 
   function getCurrentPreset() {
-    return (typeof window !== 'undefined' && window.currentGslPreset) ? window.currentGslPreset : null;
+    var slots = getCurrentPresetSlots();
+    return (slots && slots.length > 0) ? slots[0] : ((typeof window !== 'undefined' && window.currentGslPreset) ? window.currentGslPreset : null);
+  }
+
+  function getCurrentPresetSlots() {
+    return (typeof window !== 'undefined' && window.gslPresetSlots && Array.isArray(window.gslPresetSlots)) ? window.gslPresetSlots : [];
+  }
+
+  function getSlotVolume(slotIndex) {
+    var arr = typeof window !== 'undefined' && window.gslSlotVolumes && Array.isArray(window.gslSlotVolumes) ? window.gslSlotVolumes : [33, 33, 33];
+    var p = arr[slotIndex];
+    return (p != null && !isNaN(p)) ? Math.max(0, Math.min(100, p)) / 100 : 1;
+  }
+
+  function getLayerPlayStyle(slotIndex) {
+    var arr = typeof window !== 'undefined' && window.gslLayerPlayStyle && Array.isArray(window.gslLayerPlayStyle) ? window.gslLayerPlayStyle : ['none', 'none', 'none'];
+    var v = arr[slotIndex];
+    return (v === 'human' || v === 'drunk') ? v : 'none';
+  }
+
+  function getDelayOffsetSeconds(noteDurationSeconds, delayModPattern, state) {
+    if (!delayModPattern || delayModPattern === 'none') return 0;
+    if (delayModPattern !== 'human' && delayModPattern !== 'drunk') return 0;
+    if (!state) return 0;
+    state.counter += 1;
+    var remainder = (state.counter * 0.61803398875) % 1;
+    if (remainder > DELAY_MOD_CHANCE) return 0;
+    var amount = delayModPattern === 'drunk' ? DELAY_MOD_AMOUNT_DRUNK : DELAY_MOD_AMOUNT_HUMAN;
+    return noteDurationSeconds * amount * remainder;
   }
 
   function triggerAttack(noteName, when, amplitude) {
-    var presetName = getCurrentPreset();
-    if (!presetName || !window.InstrumentSampleHandler) return;
+    var slots = getCurrentPresetSlots();
+    if (!slots.length || !window.InstrumentSampleHandler) return;
 
     var midi = noteNameToMidi(noteName);
     if (midi == null) return;
@@ -119,62 +154,97 @@
     if (ctx.state !== 'running') ctx.resume().catch(function () {});
 
     var handler = window.InstrumentSampleHandler;
-    var preset = handler.getPreset(presetName);
-    if (!preset || !preset.zones) return;
-
-    var zone = handler.getZoneForMidi(presetName, midi);
-    var buf = handler.getZoneBuffer(zone, ctx);
-    if (!zone || !buf) return;
-
     var velocityNorm = Math.max(0.02, Math.min(1, amplitude || 0.8));
-    var attack = (preset.attack != null) ? preset.attack : SAMPLE_ENVELOPE.attack;
-    var decay = (preset.decay != null) ? preset.decay : SAMPLE_ENVELOPE.decay;
-    var sustain = (preset.sustain != null) ? preset.sustain : SAMPLE_ENVELOPE.sustain;
-    var release = (preset.release != null) ? preset.release : SAMPLE_ENVELOPE.release;
-
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.connect(dryGain);
-    gain.connect(reverbSend);
-
-    var peak = velocityNorm;
-    var sustainLevel = velocityNorm * sustain;
     var t0 = when != null ? when : ctx.currentTime;
-    gain.gain.linearRampToValueAtTime(peak, t0 + attack);
-    gain.gain.linearRampToValueAtTime(sustainLevel, t0 + attack + decay);
+    var group = [];
 
-    var originalPitchSemitones = zone.originalPitchCents / 100;
-    var playbackRate = Math.pow(2, (midi - originalPitchSemitones) / 12);
-    var loopStart = zone.loopStart != null ? zone.loopStart : 0.1;
-    var loopEnd = zone.loopEnd != null ? zone.loopEnd : Math.max(0.11, buf.duration - 0.1);
+    for (var i = 0; i < slots.length; i++) {
+      var presetName = slots[i];
+      var preset = handler.getPreset(presetName);
+      if (!preset || !preset.zones) continue;
 
-    var src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.playbackRate.setValueAtTime(playbackRate, t0);
-    src.loop = true;
-    src.loopStart = loopStart;
-    src.loopEnd = loopEnd;
-    src.connect(gain);
-    src.start(t0);
+      var zone = handler.getZoneForMidi(presetName, midi);
+      var buf = handler.getZoneBuffer(zone, ctx);
+      if (!zone || !buf) continue;
 
+      var playStyle = getLayerPlayStyle(i);
+      var delayState = delayStateBySlot[i] || (delayStateBySlot[i] = { counter: 0 });
+      var bpm = (typeof window !== 'undefined' && window.gslBpm != null) ? Math.max(40, Math.min(240, Number(window.gslBpm))) : 120;
+      var refNoteDuration = 60 / bpm;
+      var rawDelay = getDelayOffsetSeconds(refNoteDuration, playStyle, delayState);
+      var intensity = (typeof window !== 'undefined' && window.gslDelayIntensity != null) ? window.gslDelayIntensity : 1;
+      var delayOffset = rawDelay * intensity;
+      var t0Layer = t0 + delayOffset;
+      if (typeof window !== 'undefined' && window.primidiOnLayerTrigger) window.primidiOnLayerTrigger(i, delayOffset);
+
+      var slotVol = getSlotVolume(i);
+      var flickerMode = (typeof window !== 'undefined' && window.gslFlickerMode) ? window.gslFlickerMode : 'none';
+      if (flickerMode !== 'none') {
+        var flickerState = flickerStateBySlot[i] || (flickerStateBySlot[i] = { counter: 0 });
+        flickerState.counter += 1;
+        var frac = (flickerState.counter * 0.61803398875) % 1;
+        if (flickerMode === 'subtle') {
+          slotVol = (slotVol / 2) + (slotVol / 2) * frac;
+        } else if (flickerMode === 'moderate') {
+          slotVol = (slotVol / 2) + (1 - slotVol / 2) * frac;
+        } else if (flickerMode === 'strong') {
+          slotVol = 0.33 + 0.67 * frac;
+        }
+      }
+      var attack = (preset.attack != null) ? preset.attack : SAMPLE_ENVELOPE.attack;
+      var decay = (preset.decay != null) ? preset.decay : SAMPLE_ENVELOPE.decay;
+      var sustain = (preset.sustain != null) ? preset.sustain : SAMPLE_ENVELOPE.sustain;
+      var release = (preset.release != null) ? preset.release : SAMPLE_ENVELOPE.release;
+
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.connect(dryGain);
+      gain.connect(reverbSend);
+
+      var peak = velocityNorm * slotVol;
+      var sustainLevel = velocityNorm * sustain * slotVol;
+      gain.gain.linearRampToValueAtTime(peak, t0Layer + attack);
+      gain.gain.linearRampToValueAtTime(sustainLevel, t0Layer + attack + decay);
+
+      var originalPitchSemitones = zone.originalPitchCents / 100;
+      var playbackRate = Math.pow(2, (midi - originalPitchSemitones) / 12);
+      var loopStart = zone.loopStart != null ? zone.loopStart : 0.1;
+      var loopEnd = zone.loopEnd != null ? zone.loopEnd : Math.max(0.11, buf.duration - 0.1);
+
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.setValueAtTime(playbackRate, t0Layer);
+      src.loop = true;
+      src.loopStart = loopStart;
+      src.loopEnd = loopEnd;
+      src.connect(gain);
+      src.start(t0Layer);
+
+      group.push({ gain: gain, bufferSource: src, sustain: sustainLevel, release: release });
+    }
+
+    if (group.length === 0) return;
     if (!activeVoices[noteName]) activeVoices[noteName] = [];
-    activeVoices[noteName].push({ gain: gain, bufferSource: src, sustain: sustainLevel, release: release });
+    activeVoices[noteName].push(group);
   }
 
   function releaseOneVoice(noteName) {
     var list = activeVoices[noteName];
     if (!list || list.length === 0) return;
-    var voice = list.shift();
+    var group = list.shift();
     var ctx = audioCtx;
     if (!ctx) return;
     var t = ctx.currentTime;
-    voice.gain.gain.cancelScheduledValues(t);
-    voice.gain.gain.setValueAtTime(voice.sustain, t);
-    voice.gain.gain.linearRampToValueAtTime(0.0001, t + (voice.release || SAMPLE_ENVELOPE.release));
-    var stopTime = t + (voice.release || SAMPLE_ENVELOPE.release) + 0.05;
-    try {
-      voice.bufferSource.stop(stopTime);
-    } catch (e) {}
+    for (var i = 0; i < group.length; i++) {
+      var voice = group[i];
+      voice.gain.gain.cancelScheduledValues(t);
+      voice.gain.gain.setValueAtTime(voice.sustain, t);
+      voice.gain.gain.linearRampToValueAtTime(0.0001, t + (voice.release || SAMPLE_ENVELOPE.release));
+      var stopTime = t + (voice.release || SAMPLE_ENVELOPE.release) + 0.05;
+      try {
+        voice.bufferSource.stop(stopTime);
+      } catch (e) {}
+    }
     if (list.length === 0) delete activeVoices[noteName];
   }
 
@@ -188,15 +258,18 @@
     var ctx = audioCtx;
     var releaseTime = SAMPLE_ENVELOPE.release;
     while (list.length > 0) {
-      var voice = list.shift();
-      if (ctx) {
+      var group = list.shift();
+      if (ctx && group) {
         var t = ctx.currentTime;
-        voice.gain.gain.cancelScheduledValues(t);
-        voice.gain.gain.setValueAtTime(voice.sustain, t);
-        voice.gain.gain.linearRampToValueAtTime(0.0001, t + (voice.release || releaseTime));
-        try {
-          voice.bufferSource.stop(t + (voice.release || releaseTime) + 0.05);
-        } catch (e) {}
+        for (var i = 0; i < group.length; i++) {
+          var voice = group[i];
+          voice.gain.gain.cancelScheduledValues(t);
+          voice.gain.gain.setValueAtTime(voice.sustain, t);
+          voice.gain.gain.linearRampToValueAtTime(0.0001, t + (voice.release || releaseTime));
+          try {
+            voice.bufferSource.stop(t + (voice.release || releaseTime) + 0.05);
+          } catch (e) {}
+        }
       }
     }
     delete activeVoices[noteName];

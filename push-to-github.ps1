@@ -10,7 +10,7 @@ if (-not (Test-Path .git)) {
 }
 git add -A 2>&1 | Out-File $log -Append
 git status 2>&1 | Out-File $log -Append
-git commit -m "Sync: index.html, README.md, primid_v1_06 through primid_v1_10" 2>&1 | Out-File $log -Append
+git commit -m "primidi v1.10: multi-layer instruments, Sound/Human tabs, flicker, delay formula" 2>&1 | Out-File $log -Append
 try { git remote remove origin } catch {}
 git remote add origin https://github.com/beatsaway/primidi.git 2>&1 | Out-File $log -Append
 git branch -M main 2>&1 | Out-File $log -Append
