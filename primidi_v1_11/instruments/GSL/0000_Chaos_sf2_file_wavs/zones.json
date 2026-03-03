@@ -1,0 +1,13 @@
+[
+  {"keyLow":0,"keyHigh":34,"originalPitchCents":3100,"file":"zone_0_midi0_keys_0-34.wav","loopStart":2.414875283446712,"loopEnd":2.5583219954648526},
+  {"keyLow":35,"keyHigh":41,"originalPitchCents":3800,"file":"zone_1_midi0_keys_35-41.wav","loopStart":1.6789569160997733,"loopEnd":1.7335147392290249},
+  {"keyLow":42,"keyHigh":47,"originalPitchCents":4500,"file":"zone_2_midi0_keys_42-47.wav","loopStart":1.514467120181406,"loopEnd":1.6964172335600907},
+  {"keyLow":48,"keyHigh":52,"originalPitchCents":5000,"file":"zone_3_midi0_keys_48-52.wav","loopStart":1.325668934240363,"loopEnd":1.4620861678004535},
+  {"keyLow":53,"keyHigh":57,"originalPitchCents":5500,"file":"zone_4_midi0_keys_53-57.wav","loopStart":1.249092970521542,"loopEnd":1.295079365079365},
+  {"keyLow":58,"keyHigh":62,"originalPitchCents":6000,"file":"zone_5_midi0_keys_58-62.wav","loopStart":0.9061678004535147,"loopEnd":0.9559183673469388},
+  {"keyLow":63,"keyHigh":68,"originalPitchCents":6500,"file":"zone_6_midi0_keys_63-68.wav","loopStart":0.5954648526077098,"loopEnd":0.6327891156462585},
+  {"keyLow":69,"keyHigh":75,"originalPitchCents":7200,"file":"zone_7_midi0_keys_69-75.wav","loopStart":0.423265306122449,"loopEnd":0.5188208616780046},
+  {"keyLow":76,"keyHigh":83,"originalPitchCents":7900,"file":"zone_8_midi0_keys_76-83.wav","loopStart":0.6796825396825397,"loopEnd":0.7228571428571429},
+  {"keyLow":84,"keyHigh":92,"originalPitchCents":8800,"file":"zone_9_midi0_keys_84-92.wav","loopStart":0.4145124716553288,"loopEnd":0.4273015873015873},
+  {"keyLow":93,"keyHigh":127,"originalPitchCents":9700,"file":"zone_10_midi0_keys_93-127.wav","loopStart":0.3438548752834467,"loopEnd":0.3672108843537415}
+]

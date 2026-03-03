@@ -1,0 +1,90 @@
+[
+  {
+    "keyLow": 0,
+    "keyHigh": 34,
+    "originalPitchCents": 5406,
+    "file": "zone_0_midi0_keys_0-34.wav",
+    "loopStart": 0.1182539683,
+    "loopEnd": 0.1236734694
+  },
+  {
+    "keyLow": 35,
+    "keyHigh": 41,
+    "originalPitchCents": 5406,
+    "file": "zone_1_midi0_keys_35-41.wav",
+    "loopStart": 0.1182539683,
+    "loopEnd": 0.1236734694
+  },
+  {
+    "keyLow": 42,
+    "keyHigh": 47,
+    "originalPitchCents": 5406,
+    "file": "zone_2_midi0_keys_42-47.wav",
+    "loopStart": 0.1182539683,
+    "loopEnd": 0.1236734694
+  },
+  {
+    "keyLow": 48,
+    "keyHigh": 52,
+    "originalPitchCents": 5197,
+    "file": "zone_3_midi0_keys_48-52.wav",
+    "loopStart": 0.226122449,
+    "loopEnd": 0.2321768707
+  },
+  {
+    "keyLow": 53,
+    "keyHigh": 57,
+    "originalPitchCents": 5494,
+    "file": "zone_4_midi0_keys_53-57.wav",
+    "loopStart": 0.2333333333,
+    "loopEnd": 0.2384126984
+  },
+  {
+    "keyLow": 58,
+    "keyHigh": 62,
+    "originalPitchCents": 6198,
+    "file": "zone_5_midi0_keys_58-62.wav",
+    "loopStart": 0.1528344671,
+    "loopEnd": 0.1562358277
+  },
+  {
+    "keyLow": 63,
+    "keyHigh": 68,
+    "originalPitchCents": 6497,
+    "file": "zone_6_midi0_keys_63-68.wav",
+    "loopStart": 0.2028571429,
+    "loopEnd": 0.2057142857
+  },
+  {
+    "keyLow": 69,
+    "keyHigh": 75,
+    "originalPitchCents": 7195,
+    "file": "zone_7_midi0_keys_69-75.wav",
+    "loopStart": 0.140521542,
+    "loopEnd": 0.1424263039
+  },
+  {
+    "keyLow": 76,
+    "keyHigh": 83,
+    "originalPitchCents": 7480,
+    "file": "zone_8_midi0_keys_76-83.wav",
+    "loopStart": 0.1263718821,
+    "loopEnd": 0.1279591837
+  },
+  {
+    "keyLow": 84,
+    "keyHigh": 92,
+    "originalPitchCents": 9562,
+    "file": "zone_9_midi0_keys_84-92.wav",
+    "loopStart": 0.2688662132,
+    "loopEnd": 0.3792290249
+  },
+  {
+    "keyLow": 93,
+    "keyHigh": 127,
+    "originalPitchCents": 9562,
+    "file": "zone_10_midi0_keys_93-127.wav",
+    "loopStart": 0.2688662132,
+    "loopEnd": 0.3792290249
+  }
+]
