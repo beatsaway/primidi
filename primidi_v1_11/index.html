@@ -892,6 +892,7 @@
         .sound-layer-volumes { margin-bottom: 0.5rem; }
         .sound-layer-volumes .keyboard-visual-setting-item { margin-bottom: 0.5rem; }
         .sound-layer-item.sound-layer-empty { opacity: 0.85; color: var(--popup-text-secondary); }
+        .sound-layer-item.sound-layer-muted { opacity: 0.6; }
         .sound-layer-item .sound-layer-row-inner { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
         .sound-layer-label-btn { margin: 0; padding: 2px 6px; font-size: 13px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--popup-text); cursor: pointer; text-align: left; font-family: inherit; }
         .sound-layer-label-btn:hover { background: var(--popup-accent-subtle); color: var(--popup-accent); border-color: var(--popup-accent-border); }
@@ -992,8 +993,9 @@
                     <div id="sound-layer-menu" class="sound-layer-menu" role="menu" aria-hidden="true">
                         <button type="button" role="menuitem" data-action="clear">Clear</button>
                         <button type="button" role="menuitem" data-action="replace">Replace</button>
+                        <button type="button" role="menuitem" id="sound-layer-mute-toggle" data-action="toggle-mute">Mute</button>
                     </div>
-                    <div id="every-bar-intensity-modal" class="options-modal" aria-hidden="true" style="position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:var(--overlay-scrim);">
+                    <div id="every-bar-intensity-modal" class="options-modal" aria-hidden="true" style="position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:var(--popup-bg);">
                         <div class="options-card" style="padding:1rem;min-width:200px;background:var(--popup-surface);border:1px solid var(--popup-border);border-radius:12px;box-shadow:var(--popup-shadow);">
                             <div class="control-row" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                                 <label for="every-bar-intensity-slider">Filter</label>
@@ -1168,6 +1170,7 @@
             window.gslSlotVolumes = window.gslSlotVolumes || [33, 33, 33, 33, 33, 33];
             window.gslSlotSemitones = window.gslSlotSemitones || [0, 0, 0, 0, 0, 0];
             if (typeof window.gslLayerPlayStyle !== 'string') window.gslLayerPlayStyle = (window.gslLayerPlayStyle && Array.isArray(window.gslLayerPlayStyle) ? window.gslLayerPlayStyle[0] : undefined) || 'none';
+            if (!window.gslSlotMuted || !Array.isArray(window.gslSlotMuted)) window.gslSlotMuted = [false, false, false, false, false, false];
             if (!window.gslEveryBarPattern || !Array.isArray(window.gslEveryBarPattern)) window.gslEveryBarPattern = ['none', 'none', 'none', 'none', 'none', 'none'];
             if (!window.gslEveryBarIntensity || !Array.isArray(window.gslEveryBarIntensity)) window.gslEveryBarIntensity = [0.76, 0.76, 0.76, 0.76, 0.76, 0.76];
             window.gslDelayIntensity = window.gslDelayIntensity != null ? window.gslDelayIntensity : 1;
@@ -1229,10 +1232,19 @@
                 slots.splice(slotIndex, 1);
                 if (!window.gslSlotVolumes) window.gslSlotVolumes = [33, 33, 33, 33, 33, 33];
                 if (!window.gslSlotSemitones) window.gslSlotSemitones = [0, 0, 0, 0, 0, 0];
+                if (!window.gslSlotMuted) window.gslSlotMuted = [false, false, false, false, false, false];
+                if (!window.gslEveryBarPattern) window.gslEveryBarPattern = ['none', 'none', 'none', 'none', 'none', 'none'];
+                if (!window.gslEveryBarIntensity) window.gslEveryBarIntensity = [0.76, 0.76, 0.76, 0.76, 0.76, 0.76];
                 window.gslSlotVolumes.splice(slotIndex, 1);
                 window.gslSlotSemitones.splice(slotIndex, 1);
+                window.gslSlotMuted.splice(slotIndex, 1);
+                window.gslEveryBarPattern.splice(slotIndex, 1);
+                window.gslEveryBarIntensity.splice(slotIndex, 1);
                 while (window.gslSlotVolumes.length < MAX_INSTRUMENT_SLOTS) window.gslSlotVolumes.push(33);
                 while (window.gslSlotSemitones.length < MAX_INSTRUMENT_SLOTS) window.gslSlotSemitones.push(0);
+                while (window.gslSlotMuted.length < MAX_INSTRUMENT_SLOTS) window.gslSlotMuted.push(false);
+                while (window.gslEveryBarPattern.length < MAX_INSTRUMENT_SLOTS) window.gslEveryBarPattern.push('none');
+                while (window.gslEveryBarIntensity.length < MAX_INSTRUMENT_SLOTS) window.gslEveryBarIntensity.push(0.76);
                 if (window.startBackgroundPreloadSlots) window.startBackgroundPreloadSlots();
                 updateInstrumentGridSelection();
                 buildSoundLayerVolumesUI();
@@ -1259,6 +1271,10 @@
                     window.gslEveryBarIntensity = (window.gslEveryBarIntensity || []).slice();
                     while (window.gslEveryBarIntensity.length < MAX_INSTRUMENT_SLOTS) window.gslEveryBarIntensity.push(0.76);
                 }
+                if (!window.gslSlotMuted || window.gslSlotMuted.length < MAX_INSTRUMENT_SLOTS) {
+                    window.gslSlotMuted = (window.gslSlotMuted || []).slice();
+                    while (window.gslSlotMuted.length < MAX_INSTRUMENT_SLOTS) window.gslSlotMuted.push(false);
+                }
                 container.innerHTML = '';
                 for (var i = 0; i < MAX_INSTRUMENT_SLOTS; i++) {
                     const slotIndex = i;
@@ -1269,9 +1285,10 @@
                     const semi = (window.gslSlotSemitones || [0, 0, 0, 0, 0, 0])[slotIndex];
                     const semiNum = (semi !== undefined && !isNaN(semi)) ? semi : 0;
                     const everyBarPattern = (window.gslEveryBarPattern || [])[slotIndex] || 'none';
+                    const isMuted = !!((window.gslSlotMuted || [])[slotIndex]);
                     const isEmpty = !slug;
                     const div = document.createElement('div');
-                    div.className = 'keyboard-visual-setting-item sound-layer-item' + (isEmpty ? ' sound-layer-empty' : '');
+                    div.className = 'keyboard-visual-setting-item sound-layer-item' + (isEmpty ? ' sound-layer-empty' : '') + (isMuted ? ' sound-layer-muted' : '');
                     div.innerHTML = '<div class="sound-layer-row-inner">' +
                         '<button type="button" class="sound-layer-label-btn" data-slot="' + i + '" aria-haspopup="true" aria-expanded="false">Layer ' + (i + 1) + ': ' + (label || '(none)').replace(/</g, '&lt;') + '</button>' +
                         '<span class="sound-layer-vol-wrap"><input type="range" class="sound-layer-volume" data-slot="' + i + '" min="0" max="100" value="' + volNum + '" step="2" ' + (isEmpty ? ' disabled' : '') + '><span class="sound-layer-vol-value">' + volNum + '%</span></span>' +
@@ -1305,6 +1322,11 @@
                             var menu = document.getElementById('sound-layer-menu');
                             if (!menu) return;
                             window._soundLayerMenuSlot = slotIndex;
+                            var muteBtn = document.getElementById('sound-layer-mute-toggle');
+                            if (muteBtn) {
+                                var isMutedNow = !!((window.gslSlotMuted || [])[slotIndex]);
+                                muteBtn.textContent = isMutedNow ? 'Unmute' : 'Mute';
+                            }
                             var rect = this.getBoundingClientRect();
                             menu.style.left = (rect.left) + 'px';
                             menu.style.top = (rect.bottom + 4) + 'px';
@@ -1382,6 +1404,12 @@
                         if (slot != null) {
                             if (this.getAttribute('data-action') === 'clear') clearLayer(slot);
                             else if (this.getAttribute('data-action') === 'replace') replaceLayerWithRandom(slot);
+                            else if (this.getAttribute('data-action') === 'toggle-mute') {
+                                if (!window.gslSlotMuted) window.gslSlotMuted = [false, false, false, false, false, false];
+                                while (window.gslSlotMuted.length < MAX_INSTRUMENT_SLOTS) window.gslSlotMuted.push(false);
+                                window.gslSlotMuted[slot] = !window.gslSlotMuted[slot];
+                                buildSoundLayerVolumesUI();
+                            }
                         }
                         closeLayerMenu();
                     });
@@ -1441,10 +1469,18 @@
                     window.gslPresetSlots = chosen;
                     window.gslSlotVolumes = vols;
                     window.gslEveryBarPattern = everyBarChosen;
+                    var muted = [];
+                    var mutedCount = 0;
+                    for (var m = 0; m < MAX_INSTRUMENT_SLOTS; m++) {
+                        var isM = Math.random() < 0.33;
+                        muted.push(isM);
+                        if (isM) mutedCount += 1;
+                    }
+                    window.gslSlotMuted = muted;
                     ensurePianoLayerVolume100();
                     window.gslLayerPlayStyle = 'drunk';
                     window.gslDelayIntensity = 6;
-                    window.gslFlickerMode = 'moderate';
+                    window.gslFlickerMode = mutedCount < 3 ? 'strong' : 'moderate';
                     var intensitySlider = document.getElementById('human-delay-intensity');
                     var intensityValue = document.getElementById('human-delay-intensity-value');
                     if (intensitySlider && intensityValue) {
@@ -1452,7 +1488,7 @@
                         intensityValue.textContent = '600%';
                     }
                     var flickerSel = document.getElementById('sound-flicker-select');
-                    if (flickerSel) flickerSel.value = 'moderate';
+                    if (flickerSel) flickerSel.value = window.gslFlickerMode;
                     var playStyleSel = document.getElementById('human-play-style-all');
                     if (playStyleSel) playStyleSel.value = 'drunk';
                     if (window.startBackgroundPreloadSlots) window.startBackgroundPreloadSlots();

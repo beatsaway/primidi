@@ -245,8 +245,13 @@
       }
       var patterns = (typeof window !== 'undefined' && window.gslEveryBarPattern && Array.isArray(window.gslEveryBarPattern)) ? window.gslEveryBarPattern : [];
       var intensities = (typeof window !== 'undefined' && window.gslEveryBarIntensity && Array.isArray(window.gslEveryBarIntensity)) ? window.gslEveryBarIntensity : [];
+      var muted = (typeof window !== 'undefined' && window.gslSlotMuted && Array.isArray(window.gslSlotMuted)) ? window.gslSlotMuted : [];
       var now = audioCtx.currentTime;
       for (var idx = 0; idx < slotGains.length && idx < NUM_SLOTS; idx += 1) {
+        if (muted[idx]) {
+          slotGains[idx].gain.setTargetAtTime(0, now, 0.02);
+          continue;
+        }
         var pattern = patterns[idx] || 'none';
         var intensity = intensities[idx];
         if (intensity == null || isNaN(intensity)) intensity = 0.76;
@@ -302,6 +307,9 @@
       var delayOffset = rawDelay * intensity;
       var t0Layer = t0 + delayOffset;
       if (typeof window !== 'undefined' && window.primidiOnLayerTrigger) window.primidiOnLayerTrigger(i, delayOffset);
+
+      var mutedSlots = (typeof window !== 'undefined' && window.gslSlotMuted && Array.isArray(window.gslSlotMuted)) ? window.gslSlotMuted : [];
+      if (mutedSlots[i]) continue;
 
       var slotVol = getSlotVolume(i);
       var flickerMode = (typeof window !== 'undefined' && window.gslFlickerMode) ? window.gslFlickerMode : 'none';
