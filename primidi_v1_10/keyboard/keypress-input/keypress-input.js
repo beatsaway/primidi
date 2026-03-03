@@ -77,11 +77,20 @@
     }
     
     /**
+     * True when focus is on an input/textarea/select — don't use keys for piano
+     */
+    function isInputFocused() {
+        const el = document.activeElement;
+        return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+    }
+
+    /**
      * Handle keydown event
      */
     function handleKeyDown(event) {
         if (!window.keypressInputSettings.enabled) return;
-        
+        if (isInputFocused()) return;
+
         // Prevent default behavior for mapped keys
         const key = event.key.toLowerCase();
         
@@ -125,7 +134,8 @@
      */
     function handleKeyUp(event) {
         if (!window.keypressInputSettings.enabled) return;
-        
+        if (isInputFocused()) return;
+
         const key = event.key.toLowerCase();
         
         // Handle octave shift keys (no action on release)

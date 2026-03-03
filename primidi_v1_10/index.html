@@ -884,11 +884,22 @@
             box-shadow: 0 0 0 1px var(--popup-accent-subtle);
         }
         #settings-panel-instrument { padding: 0; }
+        .instrument-search-wrap { margin-bottom: 0.75rem; }
+        .instrument-search-input { width: 100%; max-width: 100%; padding: 8px 12px; font-size: 14px; border: 1px solid var(--popup-border); border-radius: 10px; background: var(--popup-surface); color: var(--popup-text); box-sizing: border-box; }
+        .instrument-search-input::placeholder { color: var(--popup-text-secondary); }
+        .instrument-search-input:focus { outline: none; border-color: var(--popup-accent-border); }
+        .instrument-item.instrument-item-hidden { display: none; }
         .sound-layer-volumes { margin-bottom: 0.5rem; }
         .sound-layer-volumes .keyboard-visual-setting-item { margin-bottom: 0.5rem; }
         .sound-layer-item.sound-layer-empty { opacity: 0.5; color: var(--popup-text-secondary); pointer-events: none; }
-        .sound-layer-item .sound-layer-clear { margin-left: 6px; padding: 2px 8px; font-size: 11px; border-radius: 6px; border: 1px solid var(--popup-border); background: var(--popup-surface); color: var(--popup-text-secondary); cursor: pointer; vertical-align: middle; }
+        .sound-layer-item .sound-layer-row-inner { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .sound-layer-item .sound-layer-clear { margin-left: 2px; padding: 2px 8px; font-size: 11px; border-radius: 6px; border: 1px solid var(--popup-border); background: var(--popup-surface); color: var(--popup-text-secondary); cursor: pointer; vertical-align: middle; }
         .sound-layer-item .sound-layer-clear:hover { background: var(--popup-accent-subtle); color: var(--popup-accent); border-color: var(--popup-accent-border); }
+        .sound-layer-item .sound-layer-vol-wrap { display: inline-flex; align-items: center; gap: 4px; }
+        .sound-layer-item .sound-layer-vol-wrap input[type="range"] { width: 72px; }
+        .sound-layer-item .sound-layer-semi-wrap { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; }
+        .sound-layer-item .sound-layer-semi-wrap input[type="range"] { width: 64px; }
+        .sound-layer-item .sound-layer-vol-value, .sound-layer-item .sound-layer-semi-value { font-size: 11px; color: var(--popup-text-secondary); min-width: 2.5em; }
         .sound-feeling-lucky-wrap { margin-bottom: 0.75rem; }
         .sound-feeling-lucky-wrap .sound-feeling-lucky-btn { padding: 4px 12px; font-size: 12px; border-radius: 8px; border: 1px solid var(--popup-accent-border); background: var(--popup-accent-subtle); color: var(--popup-accent); cursor: pointer; font-weight: 500; }
         .sound-feeling-lucky-wrap .sound-feeling-lucky-btn:hover { background: var(--popup-accent); color: #fff; border-color: var(--popup-accent); }
@@ -935,6 +946,9 @@
             </div>
             <div class="app-popup-body" id="app-popup-body">
                 <div id="settings-panel-instrument" class="settings-panel active">
+                    <div class="instrument-search-wrap">
+                        <input type="text" id="instrument-search" placeholder="Search instruments…" aria-label="Search instruments" class="instrument-search-input">
+                    </div>
                     <div id="instrument-grid-container"></div>
                 </div>
                 <div id="settings-panel-keyboard" class="settings-panel">
@@ -1022,7 +1036,9 @@
                 </div>
                 <div id="settings-panel-about" class="settings-panel">
                     <div class="settings-about-content">
-                        <p>Created by <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Beats Away</a>, 2026. If you enjoy using it, you can <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">support its development</a>.</p>
+                        <p>Primidi is a multi-layer sample-based MIDI instrument system with 3D visualisation of a piano keyboard. </p><p></p>Do you enjoy playing with it? 🤗 <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener noreferrer">Buy me a coffee</a> ☕ so I can continue developing more music and art related projects!</p>
+                        <p>My name is <a href="https://youtube.com/beatsaway" target="_blank" rel="noopener noreferrer">Beats Away</a>, a music producer and sound designer. I started this project because I have always wanted to just play on my MIDI controller without having to use any DAW.</p>
+                        <p>Special thanks to S. Christian Collins. His <a href="https://www.schristiancollins.com/generaluser" target="_blank" rel="noopener noreferrer" style="text-decoration: none">GeneralUser</a> GS soundfont project (SF2) is converted into WAV files for providing many of the instruments here.</p>
                     </div>
                 </div>
             </div>
@@ -1141,6 +1157,7 @@
             // Instrument grid: up to 3 instruments can be selected (layered); toggle on click
             window.gslPresetSlots = window.gslPresetSlots || [];
             window.gslSlotVolumes = window.gslSlotVolumes || [33, 33, 33];
+            window.gslSlotSemitones = window.gslSlotSemitones || [0, 0, 0];
             window.gslLayerPlayStyle = window.gslLayerPlayStyle || ['none', 'none', 'none'];
             window.gslDelayIntensity = window.gslDelayIntensity != null ? window.gslDelayIntensity : 1;
             window.gslBpm = window.gslBpm != null ? window.gslBpm : 120;
@@ -1191,8 +1208,11 @@
                 if (slotIndex < 0 || slotIndex >= slots.length) return;
                 slots.splice(slotIndex, 1);
                 if (!window.gslSlotVolumes) window.gslSlotVolumes = [33, 33, 33];
+                if (!window.gslSlotSemitones) window.gslSlotSemitones = [0, 0, 0];
                 window.gslSlotVolumes.splice(slotIndex, 1);
+                window.gslSlotSemitones.splice(slotIndex, 1);
                 while (window.gslSlotVolumes.length < MAX_INSTRUMENT_SLOTS) window.gslSlotVolumes.push(33);
+                while (window.gslSlotSemitones.length < MAX_INSTRUMENT_SLOTS) window.gslSlotSemitones.push(0);
                 if (window.startBackgroundPreloadSlots) window.startBackgroundPreloadSlots();
                 updateInstrumentGridSelection();
                 buildSoundLayerVolumesUI();
@@ -1206,6 +1226,10 @@
                     window.gslSlotVolumes = (window.gslSlotVolumes || []).slice();
                     while (window.gslSlotVolumes.length < MAX_INSTRUMENT_SLOTS) window.gslSlotVolumes.push(defaultVol);
                 }
+                if (!window.gslSlotSemitones || window.gslSlotSemitones.length < MAX_INSTRUMENT_SLOTS) {
+                    window.gslSlotSemitones = (window.gslSlotSemitones || []).slice();
+                    while (window.gslSlotSemitones.length < MAX_INSTRUMENT_SLOTS) window.gslSlotSemitones.push(0);
+                }
                 container.innerHTML = '';
                 for (var i = 0; i < MAX_INSTRUMENT_SLOTS; i++) {
                     const slotIndex = i;
@@ -1213,18 +1237,35 @@
                     const label = slug ? (window.gslSlugToDisplayName[slug] || slug) : '(none)';
                     const vol = (window.gslSlotVolumes || defaults)[slotIndex];
                     const volNum = (vol !== undefined && !isNaN(vol)) ? vol : defaultVol;
+                    const semi = (window.gslSlotSemitones || [0, 0, 0])[slotIndex];
+                    const semiNum = (semi !== undefined && !isNaN(semi)) ? semi : 0;
                     const isEmpty = !slug;
                     const div = document.createElement('div');
                     div.className = 'keyboard-visual-setting-item sound-layer-item' + (isEmpty ? ' sound-layer-empty' : '');
-                    div.innerHTML = '<label><span class="setting-label-inline">Layer ' + (i + 1) + ': ' + (label || '(none)').replace(/</g, '&lt;') + '</span>' + (isEmpty ? '' : '<button type="button" class="sound-layer-clear" aria-label="Clear layer">Clear</button>') + '</label><label class="sound-layer-slider-wrap"><input type="range" class="sound-layer-volume" data-slot="' + i + '" min="0" max="100" value="' + volNum + '" step="2" ' + (isEmpty ? ' disabled' : '') + '><span class="sound-layer-volume-value">' + volNum + '%</span></label>';
-                    const slider = div.querySelector('.sound-layer-volume');
-                    const valueSpan = div.querySelector('.sound-layer-volume-value');
-                    if (slider && valueSpan) {
-                        slider.addEventListener('input', function () {
+                    div.innerHTML = '<div class="sound-layer-row-inner">' +
+                        '<span class="setting-label-inline">Layer ' + (i + 1) + ': ' + (label || '(none)').replace(/</g, '&lt;') + '</span>' +
+                        (isEmpty ? '' : '<button type="button" class="sound-layer-clear" aria-label="Clear layer">Clear</button>') +
+                        '<span class="sound-layer-vol-wrap"><input type="range" class="sound-layer-volume" data-slot="' + i + '" min="0" max="100" value="' + volNum + '" step="2" ' + (isEmpty ? ' disabled' : '') + '><span class="sound-layer-vol-value">' + volNum + '%</span></span>' +
+                        '<span class="sound-layer-semi-wrap"><input type="range" class="sound-layer-semitone" data-slot="' + i + '" min="-12" max="12" value="' + semiNum + '" step="1" ' + (isEmpty ? ' disabled' : '') + '><span class="sound-layer-semi-value">' + semiNum + ' st</span></span>' +
+                        '</div>';
+                    const volSlider = div.querySelector('.sound-layer-volume');
+                    const volValueSpan = div.querySelector('.sound-layer-vol-value');
+                    if (volSlider && volValueSpan) {
+                        volSlider.addEventListener('input', function () {
                             var p = parseInt(this.value, 10);
                             if (!window.gslSlotVolumes) window.gslSlotVolumes = [33, 33, 33];
                             window.gslSlotVolumes[slotIndex] = p;
-                            valueSpan.textContent = p + '%';
+                            volValueSpan.textContent = p + '%';
+                        });
+                    }
+                    const semiSlider = div.querySelector('.sound-layer-semitone');
+                    const semiValueSpan = div.querySelector('.sound-layer-semi-value');
+                    if (semiSlider && semiValueSpan) {
+                        semiSlider.addEventListener('input', function () {
+                            var s = parseInt(this.value, 10);
+                            if (!window.gslSlotSemitones) window.gslSlotSemitones = [0, 0, 0];
+                            window.gslSlotSemitones[slotIndex] = s;
+                            semiValueSpan.textContent = s + ' st';
                         });
                     }
                     const clearBtn = div.querySelector('.sound-layer-clear');
@@ -1347,17 +1388,21 @@
                     });
                 }
             });
+            function filterInstrumentGrid() {
+                var q = (document.getElementById('instrument-search') && document.getElementById('instrument-search').value) || '';
+                var term = q.trim().toLowerCase();
+                var items = document.querySelectorAll('#instrument-grid-container .instrument-item');
+                items.forEach(function (btn) {
+                    var searchText = (btn.dataset.searchText || '').toLowerCase();
+                    var show = !term || searchText.indexOf(term) !== -1;
+                    btn.classList.toggle('instrument-item-hidden', !show);
+                });
+            }
             function buildInstrumentGrid(list) {
                 const container = document.getElementById('instrument-grid-container');
                 if (!container || !list || !list.length) return;
-                const byCat = {};
                 list.forEach((entry) => {
                     window.gslSlugToDisplayName[entry.slug] = displayName(entry);
-                    const parts = (entry.id || entry.slug || '').split('_');
-                    const prefix = entry.id ? parts[0] : (parts[1] || 'Other');
-                    const cat = GM_CATEGORIES[prefix] || 'Instruments';
-                    if (!byCat[cat]) byCat[cat] = [];
-                    byCat[cat].push(entry);
                 });
                 if (!window.gslPresetSlots || window.gslPresetSlots.length === 0) {
                     if (list.some(function (e) { return e.slug === 'gsl_piano'; })) {
@@ -1367,47 +1412,35 @@
                     }
                     ensurePianoLayerVolume100();
                 }
-                const order = ['Piano & Keys', 'Organs & Keys', 'Organ', 'Orchestral', 'Synth', 'Ethnic', 'Pipe', 'Drums', 'SFX', 'Instruments', 'Other'];
-                const seen = new Set();
+                var sorted = list.slice().sort(function (a, b) {
+                    var na = (displayName(a) || '').toLowerCase();
+                    var nb = (displayName(b) || '').toLowerCase();
+                    return na.localeCompare(nb, 'en', { sensitivity: 'base' });
+                });
                 container.innerHTML = '';
-                function sortCategoryFirstPiano(entries) {
-                    return entries.slice().sort(function (a, b) {
-                        if (a.slug === 'gsl_piano') return -1;
-                        if (b.slug === 'gsl_piano') return 1;
-                        return 0;
+                var grid = document.createElement('div');
+                grid.className = 'instrument-grid';
+                sorted.forEach((entry) => {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'instrument-item';
+                    btn.textContent = displayName(entry);
+                    btn.dataset.slug = entry.slug;
+                    btn.dataset.searchText = (displayName(entry) + ' ' + (entry.slug || '')).toLowerCase();
+                    btn.addEventListener('click', function () {
+                        toggleInstrumentSlot(entry.slug);
+                        updateInstrumentGridSelection();
                     });
-                }
-                function addInstrumentButtons(grid, entries) {
-                    sortCategoryFirstPiano(entries).forEach((entry) => {
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'instrument-item';
-                        btn.textContent = displayName(entry);
-                        btn.dataset.slug = entry.slug;
-                        btn.addEventListener('click', () => {
-                            toggleInstrumentSlot(entry.slug);
-                            updateInstrumentGridSelection();
-                        });
-                        grid.appendChild(btn);
-                    });
-                }
-                order.forEach((cat) => {
-                    if (!byCat[cat] || !byCat[cat].length) return;
-                    seen.add(cat);
-                    const section = document.createElement('div');
-                    section.className = 'instrument-category';
-                    section.innerHTML = '<div class="instrument-category-title">' + cat + '</div><div class="instrument-grid"></div>';
-                    addInstrumentButtons(section.querySelector('.instrument-grid'), byCat[cat]);
-                    container.appendChild(section);
+                    grid.appendChild(btn);
                 });
-                Object.keys(byCat).filter(c => !seen.has(c)).forEach((cat) => {
-                    if (!byCat[cat].length) return;
-                    const section = document.createElement('div');
-                    section.className = 'instrument-category';
-                    section.innerHTML = '<div class="instrument-category-title">' + cat + '</div><div class="instrument-grid"></div>';
-                    addInstrumentButtons(section.querySelector('.instrument-grid'), byCat[cat]);
-                    container.appendChild(section);
-                });
+                container.appendChild(grid);
+                var searchInput = document.getElementById('instrument-search');
+                if (searchInput) {
+                    searchInput.removeEventListener('input', window._instrumentSearchInputHandler);
+                    window._instrumentSearchInputHandler = filterInstrumentGrid;
+                    searchInput.addEventListener('input', filterInstrumentGrid);
+                    filterInstrumentGrid();
+                }
                 updateInstrumentGridSelection();
                 buildSoundLayerVolumesUI();
             }

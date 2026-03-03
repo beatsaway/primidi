@@ -126,6 +126,12 @@
     return (p != null && !isNaN(p)) ? Math.max(0, Math.min(100, p)) / 100 : 1;
   }
 
+  function getSlotSemitone(slotIndex) {
+    var arr = typeof window !== 'undefined' && window.gslSlotSemitones && Array.isArray(window.gslSlotSemitones) ? window.gslSlotSemitones : [0, 0, 0];
+    var s = arr[slotIndex];
+    return (s != null && !isNaN(s)) ? Math.max(-12, Math.min(12, s)) : 0;
+  }
+
   function getLayerPlayStyle(slotIndex) {
     var arr = typeof window !== 'undefined' && window.gslLayerPlayStyle && Array.isArray(window.gslLayerPlayStyle) ? window.gslLayerPlayStyle : ['none', 'none', 'none'];
     var v = arr[slotIndex];
@@ -206,8 +212,9 @@
       gain.gain.linearRampToValueAtTime(peak, t0Layer + attack);
       gain.gain.linearRampToValueAtTime(sustainLevel, t0Layer + attack + decay);
 
+      var semitoneOffset = getSlotSemitone(i);
       var originalPitchSemitones = zone.originalPitchCents / 100;
-      var playbackRate = Math.pow(2, (midi - originalPitchSemitones) / 12);
+      var playbackRate = Math.pow(2, (midi + semitoneOffset - originalPitchSemitones) / 12);
       var loopStart = zone.loopStart != null ? zone.loopStart : 0.1;
       var loopEnd = zone.loopEnd != null ? zone.loopEnd : Math.max(0.11, buf.duration - 0.1);
 
